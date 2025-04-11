@@ -31,7 +31,7 @@
 .restaurant-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px var(--card-hover-shadow);
-  border-color: var(--card-border);
+  border-color: var(--primary-color);
 }
 
 .restaurant-card:hover:before {
@@ -49,21 +49,24 @@
   width: 8px;
 }
 
-/* Dark mode specific styles */
+/* Improved dark mode specific styles */
 .restaurant-card.dark-mode {
   background: var(--card-bg);
   border-color: var(--card-border);
   color: var(--text-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .restaurant-card.dark-mode:hover {
   border-color: var(--primary-color);
-  box-shadow: 0 4px 8px rgba(155, 77, 202, 0.2);
+  box-shadow: 0 4px 12px rgba(155, 77, 202, 0.4);
+  background: #333; /* Slightly lighter on hover */
 }
 
 .restaurant-card.dark-mode.selected {
-  background: rgba(155, 77, 202, 0.1);
-  box-shadow: 0 4px 12px rgba(155, 77, 202, 0.2);
+  background: #333;
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 15px rgba(183, 127, 219, 0.5);
 }
 
 .restaurant-left {
@@ -148,7 +151,7 @@
 
 .restaurant-card:hover .restaurant-right {
   transform: scale(1.05);
-  border-color: var(--card-border);
+  border-color: var(--primary-color);
 }
 
 .restaurant-card.selected .restaurant-right {
@@ -168,10 +171,12 @@
 
 /* Dark mode adjustments for logo */
 .restaurant-card.dark-mode .restaurant-right {
-  border-color: #333;
+  border-color: #444;
   background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .restaurant-card.dark-mode.selected .restaurant-right {
   border-color: var(--primary-color);
+  box-shadow: 0 2px 10px rgba(183, 127, 219, 0.6);
 }

@@ -18,6 +18,7 @@
   align-items: center;
   justify-content: center;
   transition: var(--dark-transition);
+  position: relative;
 }
 
 #global-footer.dark-mode {
@@ -27,4 +28,21 @@
 
 #global-footer p {
   margin: 0;
+}
+
+/* Rainbow border for footer - LGBTQIA+ pride flag */
+.rainbow-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, 
+    #FF0018, /* Red */
+    #FFA52C, /* Orange */
+    #FFFF41, /* Yellow */
+    #008018, /* Green */
+    #0000F9, /* Blue */
+    #86007D  /* Purple */
+  );
 }

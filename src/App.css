@@ -24,22 +24,23 @@
   --dark-transition: all 0.3s ease;
 }
 
+/* Improved dark mode color palette */
 body.dark-mode:root, .dark-mode {
-  --bg-color: #121212;
-  --text-color: #e0e0e0;
-  --header-bg: #2a0934;
+  --bg-color: #1a1a1a;
+  --text-color: #f0f0f0;
+  --header-bg: #42105e; /* Lighter purple for better contrast */
   --header-text: #fff;
-  --card-bg: #1e1e1e;
-  --card-border: #333;
+  --card-bg: #2a2a2a; /* Lighter card background */
+  --card-border: #444;
   --card-shadow: rgba(0,0,0,0.2);
-  --card-hover-shadow: rgba(0,0,0,0.4);
-  --primary-color: #9b4dca;
-  --primary-light: #b77fdb;
+  --card-hover-shadow: rgba(155, 77, 202, 0.3); /* More visible hover effect */
+  --primary-color: #b77fdb; /* Brighter primary color */
+  --primary-light: #d4a8f3; /* Even brighter for hover states */
   --accent-color: #ffde59;
-  --section-header: #4a0e5c;
+  --section-header: #5c1578; /* Lighter section header */
   --section-text: #fff;
-  --footer-bg: #2a0934;
-  --footer-text: #e0e0e0;
+  --footer-bg: #42105e; /* Match header */
+  --footer-text: #f0f0f0;
 }
 
 body, html {
@@ -77,7 +78,7 @@ body, html {
   background-color: var(--bg-color);
 }
 
-/* Mobile Portrait Layout */
+/* Mobile Portrait Layout - Improved */
 @media (max-width: 800px) and (orientation: portrait) {
   #main-content {
     flex-direction: column;

@@ -34,24 +34,65 @@
   top: 0;
   background: var(--section-header);
   color: var(--section-text);
-  padding: 0.6rem;
+  padding: 0.6rem 1rem;
   font-weight: bold;
   margin-bottom: 0.8rem;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 1rem;
   z-index: 1;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px var(--card-shadow);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .neighborhood-header:hover {
   background: var(--primary-light);
   transform: translateY(-1px);
+  box-shadow: 0 3px 8px var(--card-shadow);
+}
+
+/* Active neighborhood header */
+.neighborhood-header.active {
+  background: var(--accent-color);
+  color: var(--primary-color);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+.neighborhood-header.active:hover {
+  background: #fff0a0; /* Lighter yellow when active and hovered */
+}
+
+/* Dark mode active header */
+.dark-mode .neighborhood-header.active {
+  color: #333; /* Darker text for contrast on yellow background */
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+}
+
+/* Venue count badge */
+.venue-count {
+  background: rgba(255,255,255,0.3);
+  border-radius: 12px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+
+.active .venue-count {
+  background: rgba(117, 7, 135, 0.2);
 }
 
 .neighborhood-content {
   margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+/* Expanded content effect */
+.neighborhood-content.expanded {
+  padding-left: 0.3rem;
+  border-left: 3px solid var(--accent-color);
 }
 
 /* No Results Message */
@@ -80,6 +121,7 @@
 .reset-filters-btn:hover {
   background: var(--primary-light);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--card-shadow);
 }
 
 /* Dark mode styles */
@@ -91,13 +133,40 @@
   background: var(--primary-light);
 }
 
-/* Mobile Portrait Adjustments */
+/* Custom scrollbar for sidebar */
+#sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+  background: rgba(117, 7, 135, 0.3);
+  border-radius: 4px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(117, 7, 135, 0.5);
+}
+
+/* Dark mode scrollbar */
+#sidebar.dark-mode::-webkit-scrollbar-thumb {
+  background: rgba(183, 127, 219, 0.4);
+}
+
+#sidebar.dark-mode::-webkit-scrollbar-thumb:hover {
+  background: rgba(183, 127, 219, 0.6);
+}
+
+/* Mobile Portrait Adjustments - Improved */
 @media (max-width: 800px) and (orientation: portrait) {
   #sidebar {
     position: static;
     width: 100%;
-    height: 40%;
-    max-height: 40%;
+    height: 50%; /* Changed from 40% to 50% to match map */
+    max-height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--card-border);
     box-shadow: 0 2px 5px var(--card-shadow);
@@ -105,5 +174,11 @@
   
   #venue-container {
     padding: 0.5rem;
+  }
+  
+  .neighborhood-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
   }
 }

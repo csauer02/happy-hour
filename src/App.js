@@ -19,17 +19,44 @@ export default function App() {
   const [markers, setMarkers] = useState({});
   const [darkMode, setDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   
-  // Check for saved dark mode preference on initial load
+  // Check for system preferences and saved dark mode preference on initial load
   useEffect(() => {
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
+    // Check if prefers-color-scheme media query is available
+    if (window.matchMedia) {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      
+      // Check if there's a saved preference in localStorage, otherwise use system preference
+      const savedDarkMode = localStorage.getItem('darkMode');
+      
+      if (savedDarkMode !== null) {
+        // Use saved preference if available
+        setDarkMode(savedDarkMode === 'true');
+      } else if (prefersDark) {
+        // Use system preference if no saved preference
+        setDarkMode(true);
+      }
+    } else {
+      // Fallback to saved preference only if media query not supported
+      const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+      setDarkMode(savedDarkMode);
+    }
     
     // Apply dark mode class to body
-    if (savedDarkMode) {
+    if (darkMode) {
       document.body.classList.add('dark-mode');
     }
   }, []);
+  
+  // Effect to apply dark mode class to body when darkMode changes
+  useEffect(() => {
+    if (darkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [darkMode]);
   
   // Load CSV data on component mount
   useEffect(() => {
@@ -67,7 +94,7 @@ export default function App() {
     
     // If search term is empty, just apply day/happening now filters
     if (!term.trim()) {
-      applyFilters(allVenues, activeDay, happeningNow);
+      applyFilters(allVenues, activeDay, happeningNow, selectedNeighborhood);
       return;
     }
     
@@ -82,11 +109,11 @@ export default function App() {
     });
     
     // Apply other filters to search results
-    applyFilters(searchResults, activeDay, happeningNow);
-  }, [allVenues, activeDay, happeningNow]);
+    applyFilters(searchResults, activeDay, happeningNow, selectedNeighborhood);
+  }, [allVenues, activeDay, happeningNow, selectedNeighborhood]);
   
   // Filter application helper function
-  const applyFilters = useCallback((venueList, day, isHappeningNow) => {
+  const applyFilters = useCallback((venueList, day, isHappeningNow, neighborhood) => {
     let filtered = [...venueList];
     
     // Apply day filter
@@ -107,6 +134,14 @@ export default function App() {
       if (todayColumn) {
         filtered = filtered.filter(venue => venue[todayColumn] && venue[todayColumn].toLowerCase() === 'yes');
       }
+    }
+    
+    // Apply neighborhood filter
+    if (neighborhood) {
+      filtered = filtered.filter(venue => 
+        venue.Neighborhood === neighborhood || 
+        (!venue.Neighborhood && neighborhood === 'Uncategorized')
+      );
     }
     
     setFilteredVenues(filtered);
@@ -135,9 +170,9 @@ export default function App() {
       handleSearch(searchTerm);
     } else {
       // Otherwise just apply regular filters
-      applyFilters(allVenues, activeDay, happeningNow);
+      applyFilters(allVenues, activeDay, happeningNow, selectedNeighborhood);
     }
-  }, [activeDay, happeningNow, allVenues, searchTerm, handleSearch, applyFilters]);
+  }, [activeDay, happeningNow, allVenues, searchTerm, selectedNeighborhood, handleSearch, applyFilters]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -146,19 +181,27 @@ export default function App() {
     
     // Save preference to localStorage
     localStorage.setItem('darkMode', newDarkMode.toString());
-    
-    // Toggle class on body
-    if (newDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
   };
   
   // Handle venue selection
   const handleVenueSelect = (venueId) => {
     const selected = venues.find(v => v.id === venueId);
     setSelectedVenue(selected);
+    
+    // If selecting a venue, also select its neighborhood
+    if (selected && selected.Neighborhood) {
+      setSelectedNeighborhood(selected.Neighborhood);
+    }
+  };
+  
+  // Handle neighborhood selection
+  const handleNeighborhoodSelect = (neighborhood) => {
+    setSelectedNeighborhood(neighborhood);
+    
+    // If deselecting the current neighborhood, also clear selected venue
+    if (selectedVenue && neighborhood === null) {
+      setSelectedVenue(null);
+    }
   };
   
   // Handle day filter change
@@ -196,6 +239,26 @@ export default function App() {
     }
   };
   
+  // Reset all filters
+  const handleResetFilters = () => {
+    setActiveDay('all');
+    setHappeningNow(false);
+    setSearchTerm('');
+    setSelectedNeighborhood(null);
+    setSelectedVenue(null);
+    setFilteredVenues(allVenues);
+    
+    // Reset marker visibility
+    if (mapRef && Object.keys(markers).length) {
+      allVenues.forEach(venue => {
+        const marker = markers[venue.id];
+        if (marker) {
+          marker.setMap(mapRef);
+        }
+      });
+    }
+  };
+  
   return (
     <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <Header 
@@ -206,6 +269,7 @@ export default function App() {
         onSearch={handleSearch}
         darkMode={darkMode}
         onDarkModeToggle={handleDarkModeToggle}
+        onResetFilters={handleResetFilters}
       />
       
       <main id="main-content">
@@ -214,6 +278,8 @@ export default function App() {
           selectedVenue={selectedVenue}
           onVenueSelect={handleVenueSelect}
           darkMode={darkMode}
+          onNeighborhoodSelect={handleNeighborhoodSelect}
+          selectedNeighborhood={selectedNeighborhood}
         />
         
         <MapView 
@@ -223,6 +289,7 @@ export default function App() {
           setMarkers={setMarkers}
           onMarkerClick={handleVenueSelect}
           darkMode={darkMode}
+          selectedNeighborhood={selectedNeighborhood}
         />
       </main>
       

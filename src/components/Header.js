@@ -8,7 +8,8 @@ const Header = ({
   onHappeningNowToggle, 
   onSearch, 
   darkMode, 
-  onDarkModeToggle 
+  onDarkModeToggle,
+  onResetFilters
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -32,6 +33,12 @@ const Header = ({
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     onSearch(searchTerm);
+  };
+  
+  // Clear search when reset filters is clicked
+  const handleResetClick = () => {
+    setSearchTerm('');
+    onResetFilters();
   };
   
   // Toggle search visibility for mobile
@@ -72,6 +79,23 @@ const Header = ({
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </button>
+          
+          {searchTerm && (
+            <button 
+              type="button" 
+              className="clear-search-btn"
+              onClick={() => {
+                setSearchTerm('');
+                onSearch(''); // Clear search results
+              }}
+              aria-label="Clear search"
+            >
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          )}
         </form>
       </div>
       
@@ -103,6 +127,20 @@ const Header = ({
         </div>
         
         <div className="header-controls">
+          <button
+            className="icon-button reset-filters"
+            onClick={handleResetClick}
+            aria-label="Reset all filters"
+            title="Reset all filters"
+          >
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+              <path d="M21 3v5h-5"></path>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+              <path d="M3 21v-5h5"></path>
+            </svg>
+          </button>
+          
           <button 
             className="icon-button search-toggle" 
             onClick={toggleSearch}
