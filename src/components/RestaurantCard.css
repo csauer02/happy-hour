@@ -1,0 +1,81 @@
+/* RestaurantCard.css - Styles for restaurant cards */
+
+.restaurant-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .restaurant-card:hover {
+    background: #f9f1ed;
+  }
+  
+  .restaurant-card.selected {
+    background: #d0d0d0;
+  }
+  
+  .restaurant-left {
+    flex: 1;
+  }
+  
+  .restaurant-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .restaurant-top h2 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #750787;
+  }
+  
+  .icon-links {
+    display: flex;
+    gap: 0.4rem;
+  }
+  
+  .icon-links a {
+    text-decoration: none;
+    color: #e40303;
+    transition: transform 0.2s;
+  }
+  
+  .icon-links a:hover {
+    transform: scale(1.1);
+  }
+  
+  .icon-links svg {
+    width: 16px;
+    height: 16px;
+    stroke: #333;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  
+  .restaurant-deal p {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.8rem;
+  }
+  
+  .restaurant-right {
+    width: 40px;
+    height: 40px;
+    margin-left: 0.5rem;
+    overflow: hidden;
+    border-radius: 4px;
+  }
+  
+  .restaurant-right img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }

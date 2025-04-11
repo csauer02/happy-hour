@@ -1,0 +1,46 @@
+/* MapView.css - Styles for the map container */
+
+/* Map Container (Desktop/Landscape) */
+#map-container {
+    position: fixed;
+    top: 60px;
+    bottom: 30px;
+    left: 320px;
+    right: 0;
+    background: #eee;
+    overflow: hidden;
+    z-index: 1;
+  }
+  
+  #map {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Favicon overlay - anchored inside #map */
+  #map-favicon-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.7);
+    padding: 5px;
+    border-radius: 4px;
+    z-index: 10;
+  }
+  
+  #map-favicon-overlay img {
+    width: 32px;
+    height: 32px;
+  }
+  
+  /* Mobile Portrait Adjustments */
+  @media (max-width: 800px) and (orientation: portrait) {
+    #map-container {
+      position: static;
+      width: 100%;
+      height: 60%;
+      left: 0;
+      border-top: 1px solid #ddd;
+    }
+  }
