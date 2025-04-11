@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Papa from 'papaparse';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
@@ -11,11 +11,25 @@ export default function App() {
   // State variables
   const [venues, setVenues] = useState([]);
   const [filteredVenues, setFilteredVenues] = useState([]);
+  const [allVenues, setAllVenues] = useState([]);
   const [selectedVenue, setSelectedVenue] = useState(null);
   const [activeDay, setActiveDay] = useState('all');
   const [happeningNow, setHappeningNow] = useState(false);
   const [mapRef, setMapRef] = useState(null);
   const [markers, setMarkers] = useState({});
+  const [darkMode, setDarkMode] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Check for saved dark mode preference on initial load
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(savedDarkMode);
+    
+    // Apply dark mode class to body
+    if (savedDarkMode) {
+      document.body.classList.add('dark-mode');
+    }
+  }, []);
   
   // Load CSV data on component mount
   useEffect(() => {
@@ -26,15 +40,19 @@ export default function App() {
       header: true,
       complete: (results) => {
         // Sort by neighborhood
-        const sortedData = results.data.sort((a, b) => {
-          const nA = (a.Neighborhood || '').toLowerCase();
-          const nB = (b.Neighborhood || '').toLowerCase();
-          return nA.localeCompare(nB);
-        });
+        const sortedData = results.data
+          .filter(item => item.RestaurantName && item.Deal) // Filter out empty rows
+          .sort((a, b) => {
+            const nA = (a.Neighborhood || '').toLowerCase();
+            const nB = (b.Neighborhood || '').toLowerCase();
+            return nA.localeCompare(nB);
+          });
         
         // Add IDs to each venue
         const dataWithIds = sortedData.map((venue, i) => ({ ...venue, id: i }));
+        
         setVenues(dataWithIds);
+        setAllVenues(dataWithIds);
         setFilteredVenues(dataWithIds);
       },
       error: (err) => {
@@ -43,65 +61,104 @@ export default function App() {
     });
   }, []);
   
-  // Filter venues based on current filters
-  useEffect(() => {
-    if (venues.length) {
-      let filtered = [...venues];
+  // Search function
+  const handleSearch = useCallback((term) => {
+    setSearchTerm(term);
+    
+    // If search term is empty, just apply day/happening now filters
+    if (!term.trim()) {
+      applyFilters(allVenues, activeDay, happeningNow);
+      return;
+    }
+    
+    // Search through venues by name, deal, and neighborhood
+    const searchResults = allVenues.filter(venue => {
+      const lowerTerm = term.toLowerCase();
+      return (
+        (venue.RestaurantName && venue.RestaurantName.toLowerCase().includes(lowerTerm)) ||
+        (venue.Deal && venue.Deal.toLowerCase().includes(lowerTerm)) ||
+        (venue.Neighborhood && venue.Neighborhood.toLowerCase().includes(lowerTerm))
+      );
+    });
+    
+    // Apply other filters to search results
+    applyFilters(searchResults, activeDay, happeningNow);
+  }, [allVenues, activeDay, happeningNow]);
+  
+  // Filter application helper function
+  const applyFilters = useCallback((venueList, day, isHappeningNow) => {
+    let filtered = [...venueList];
+    
+    // Apply day filter
+    if (day !== 'all') {
+      filtered = filtered.filter(venue => {
+        const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
+        const column = dayMapping[day];
+        return venue[column] && venue[column].toLowerCase() === 'yes';
+      });
+    }
+    
+    // Apply happening now filter
+    if (isHappeningNow) {
+      const today = new Date().getDay();
+      const dayMapping = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri' };
+      const todayColumn = dayMapping[today];
       
-      // Apply day filter
-      if (activeDay !== 'all') {
-        filtered = filtered.filter(venue => {
-          const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
-          const column = dayMapping[activeDay];
-          return venue[column] && venue[column].toLowerCase() === 'yes';
-        });
-      }
-      
-      // Apply happening now filter
-      if (happeningNow) {
-        const today = new Date().getDay();
-        const dayMapping = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri' };
-        const todayColumn = dayMapping[today];
-        
-        if (todayColumn) {
-          filtered = filtered.filter(venue => venue[todayColumn] && venue[todayColumn].toLowerCase() === 'yes');
-        }
-      }
-      
-      setFilteredVenues(filtered);
-      
-      // Update marker visibility if map is available
-      if (mapRef && Object.keys(markers).length) {
-        venues.forEach(venue => {
-          const marker = markers[venue.id];
-          if (marker) {
-            const isVisible = filtered.some(v => v.id === venue.id);
-            marker.setMap(isVisible ? mapRef : null);
-          }
-        });
+      if (todayColumn) {
+        filtered = filtered.filter(venue => venue[todayColumn] && venue[todayColumn].toLowerCase() === 'yes');
       }
     }
-  }, [venues, activeDay, happeningNow, mapRef, markers]);
+    
+    setFilteredVenues(filtered);
+    
+    // Update marker visibility if map is available
+    updateMarkerVisibility(filtered);
+  }, []);
+  
+  // Update marker visibility based on filtered venues
+  const updateMarkerVisibility = useCallback((filteredList) => {
+    if (mapRef && Object.keys(markers).length) {
+      allVenues.forEach(venue => {
+        const marker = markers[venue.id];
+        if (marker) {
+          const isVisible = filteredList.some(v => v.id === venue.id);
+          marker.setMap(isVisible ? mapRef : null);
+        }
+      });
+    }
+  }, [mapRef, markers, allVenues]);
+  
+  // Effect to apply filters when filter state changes
+  useEffect(() => {
+    // If search is active, apply search and filters
+    if (searchTerm) {
+      handleSearch(searchTerm);
+    } else {
+      // Otherwise just apply regular filters
+      applyFilters(allVenues, activeDay, happeningNow);
+    }
+  }, [activeDay, happeningNow, allVenues, searchTerm, handleSearch, applyFilters]);
+  
+  // Handle dark mode toggle
+  const handleDarkModeToggle = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    
+    // Save preference to localStorage
+    localStorage.setItem('darkMode', newDarkMode.toString());
+    
+    // Toggle class on body
+    if (newDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  };
   
   // Handle venue selection
   const handleVenueSelect = (venueId) => {
     const selected = venues.find(v => v.id === venueId);
     setSelectedVenue(selected);
-    
-    // Center and zoom map on selected venue if map and markers available
-    if (mapRef && markers[venueId]) {
-      const marker = markers[venueId];
-      mapRef.panTo(marker.getPosition());
-      mapRef.setZoom(16);
-      
-      // Set all markers to default opacity
-      Object.values(markers).forEach(m => {
-        m.setOpacity(0.3);
-      });
-      
-      // Highlight the selected marker
-      marker.setOpacity(1.0);
-    }
   };
   
   // Handle day filter change
@@ -140,12 +197,15 @@ export default function App() {
   };
   
   return (
-    <div className="app-container">
+    <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <Header 
         activeDay={activeDay}
         happeningNow={happeningNow}
         onDayChange={handleDayChange}
         onHappeningNowToggle={handleHappeningNowToggle}
+        onSearch={handleSearch}
+        darkMode={darkMode}
+        onDarkModeToggle={handleDarkModeToggle}
       />
       
       <main id="main-content">
@@ -153,17 +213,20 @@ export default function App() {
           venues={filteredVenues} 
           selectedVenue={selectedVenue}
           onVenueSelect={handleVenueSelect}
+          darkMode={darkMode}
         />
         
         <MapView 
           venues={venues}
+          selectedVenue={selectedVenue}
           setMapRef={setMapRef}
           setMarkers={setMarkers}
           onMarkerClick={handleVenueSelect}
+          darkMode={darkMode}
         />
       </main>
       
-      <Footer />
+      <Footer darkMode={darkMode} />
     </div>
   );
 }

@@ -1,110 +1,284 @@
 /* Header.css - Styles for the Header component */
 
-/* Fixed Global Header (Desktop/Landscape) */
+/* Fixed Global Header (consistent across all devices) */
 #global-header {
-    position: fixed;
-    top: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px; /* Consistent height */
+  background: #750787; /* Vibrant purple background */
+  color: white;
+  border-bottom: 1px solid #ddd;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+/* Dark mode styles */
+#global-header.dark-mode {
+  background: #2a0934;
+  border-bottom-color: #444;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Logo styling */
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo h1 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* Search container */
+.search-container {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 20px;
+}
+
+.search-container form {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 8px 36px 8px 12px;
+  border-radius: 20px;
+  border: none;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.search-container input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #ffde59;
+  background: #fff;
+}
+
+.search-container button {
+  position: absolute;
+  right: 4px;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  color: #750787;
+}
+
+.search-container button:hover {
+  background: rgba(117, 7, 135, 0.1);
+}
+
+.search-container button svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Search toggle and dark mode buttons */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-button {
+  display: none; /* Hidden by default, shown in mobile */
+  background: transparent;
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.icon-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Filter Controls & Buttons */
+#filter-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#day-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+#day-filter button {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.7rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #750787;
+  transition: all 0.2s ease;
+}
+
+#day-filter button:hover {
+  transform: scale(1.05);
+  background: white;
+}
+
+#day-filter button.active {
+  background: #ffde59; /* Bright yellow for active state */
+  color: #750787;
+  border-color: #ffde59;
+}
+
+/* Dark mode styles for day filter buttons */
+.dark-mode #day-filter button {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: #333;
+}
+
+.dark-mode #day-filter button:hover {
+  background: white;
+}
+
+.dark-mode #day-filter button.active {
+  background: #ffde59;
+}
+
+/* Happening Now Toggle */
+.happening-now {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: white;
+  font-weight: bold;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 22px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.5);
+  transition: 0.4s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+  background-color: #ffde59; /* Bright yellow for toggle */
+}
+
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* Mobile styles */
+@media (max-width: 800px) {
+  #global-header {
+    padding: 0 0.5rem;
+  }
+  
+  .logo h1 {
+    font-size: 1rem;
+  }
+  
+  .search-container {
+    position: absolute;
+    top: 60px;
     left: 0;
     right: 0;
-    height: 60px;
-    background: #fff;
-    border-bottom: 1px solid #ddd;
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding: 0 1rem;
-  }
-  
-  /* Filter Controls & Buttons */
-  #filter-controls {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
     max-width: 100%;
+    margin: 0;
+    background: #750787;
+    padding: 10px;
+    z-index: 999;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: none;
   }
   
-  #day-filter {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    justify-content: center;
+  .search-container.visible {
+    display: block;
+  }
+  
+  .dark-mode .search-container {
+    background: #2a0934;
+  }
+  
+  .icon-button {
+    display: flex; /* Show in mobile */
+  }
+  
+  #filter-controls {
+    justify-content: flex-end;
+    flex: 1;
   }
   
   #day-filter button {
-    background: #fff;
-    border: 1px solid #ccc;
-    padding: 0.4rem 0.7rem;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.85rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
   }
   
-  #day-filter button.active {
-    background: #333;
-    color: #fff;
+  .happening-now span {
+    display: none;
   }
-  
-  /* Happening Now Toggle */
-  .happening-now {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.85rem;
-  }
-  
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 42px;
-    height: 22px;
-  }
-  
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: 0.4s;
-    border-radius: 22px;
-  }
-  
-  .slider:before {
-    content: "";
-    position: absolute;
-    height: 16px;
-    width: 16px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.4s;
-    border-radius: 50%;
-  }
-  
-  .switch input:checked + .slider {
-    background-color: #4CAF50;
-  }
-  
-  .switch input:checked + .slider:before {
-    transform: translateX(20px);
-  }
-  
-  /* Mobile Header Adjustments */
-  @media (max-width: 800px) and (orientation: portrait) {
-    #global-header {
-      position: static;
-      width: 100%;
-      height: auto;
-      padding: 0.5rem 1rem;
-    }
-  }
+}

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import './RestaurantCard.css';
 
-const RestaurantCard = ({ venue, isSelected, onSelect }) => {
+const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, ref) => {
   // Function to get favicon URL from restaurant website
   const getFaviconUrl = (url) => {
     try {
@@ -14,8 +14,9 @@ const RestaurantCard = ({ venue, isSelected, onSelect }) => {
 
   return (
     <div 
-      className={`restaurant-card ${isSelected ? 'selected' : ''}`}
+      className={`restaurant-card ${isSelected ? 'selected' : ''} ${darkMode ? 'dark-mode' : ''}`}
       onClick={onSelect}
+      ref={ref}
     >
       <div className="restaurant-left">
         <div className="restaurant-top">
@@ -68,6 +69,6 @@ const RestaurantCard = ({ venue, isSelected, onSelect }) => {
       </div>
     </div>
   );
-};
+});
 
 export default RestaurantCard;

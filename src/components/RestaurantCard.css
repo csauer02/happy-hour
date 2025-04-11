@@ -1,81 +1,177 @@
 /* RestaurantCard.css - Styles for restaurant cards */
 
 .restaurant-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fff;
-    border-radius: 6px;
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  
-  .restaurant-card:hover {
-    background: #f9f1ed;
-  }
-  
-  .restaurant-card.selected {
-    background: #d0d0d0;
-  }
-  
-  .restaurant-left {
-    flex: 1;
-  }
-  
-  .restaurant-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .restaurant-top h2 {
-    margin: 0;
-    font-size: 0.95rem;
-    color: #750787;
-  }
-  
-  .icon-links {
-    display: flex;
-    gap: 0.4rem;
-  }
-  
-  .icon-links a {
-    text-decoration: none;
-    color: #e40303;
-    transition: transform 0.2s;
-  }
-  
-  .icon-links a:hover {
-    transform: scale(1.1);
-  }
-  
-  .icon-links svg {
-    width: 16px;
-    height: 16px;
-    stroke: #333;
-    fill: none;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  
-  .restaurant-deal p {
-    margin: 0.25rem 0 0 0;
-    font-size: 0.8rem;
-  }
-  
-  .restaurant-right {
-    width: 40px;
-    height: 40px;
-    margin-left: 0.5rem;
-    overflow: hidden;
-    border-radius: 4px;
-  }
-  
-  .restaurant-right img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card-bg);
+  border-radius: 10px;
+  margin-bottom: 0.8rem;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--card-border);
+  box-shadow: 0 2px 5px var(--card-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.restaurant-card:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 5px;
+  background: var(--primary-color);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--card-hover-shadow);
+  border-color: var(--card-border);
+}
+
+.restaurant-card:hover:before {
+  opacity: 1;
+}
+
+.restaurant-card.selected {
+  background: var(--card-bg);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(117, 7, 135, 0.15);
+}
+
+.restaurant-card.selected:before {
+  opacity: 1;
+  width: 8px;
+}
+
+/* Dark mode specific styles */
+.restaurant-card.dark-mode {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+  color: var(--text-color);
+}
+
+.restaurant-card.dark-mode:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 8px rgba(155, 77, 202, 0.2);
+}
+
+.restaurant-card.dark-mode.selected {
+  background: rgba(155, 77, 202, 0.1);
+  box-shadow: 0 4px 12px rgba(155, 77, 202, 0.2);
+}
+
+.restaurant-left {
+  flex: 1;
+}
+
+.restaurant-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.restaurant-top h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--primary-color);
+  font-weight: bold;
+  transition: color 0.2s ease;
+}
+
+.restaurant-card:hover .restaurant-top h2 {
+  color: var(--primary-light);
+}
+
+.icon-links {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.icon-links a {
+  text-decoration: none;
+  color: var(--primary-color);
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.icon-links a:hover {
+  transform: scale(1.2);
+}
+
+.icon-links svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--primary-color);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: all 0.2s ease;
+}
+
+.icon-links a:hover svg {
+  stroke: var(--primary-light);
+}
+
+.restaurant-deal {
+  margin-top: 0.4rem;
+}
+
+.restaurant-deal p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+
+.restaurant-right {
+  width: 48px;
+  height: 48px;
+  margin-left: 0.8rem;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--card-shadow);
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.restaurant-card:hover .restaurant-right {
+  transform: scale(1.05);
+  border-color: var(--card-border);
+}
+
+.restaurant-card.selected .restaurant-right {
+  border-color: var(--primary-color);
+}
+
+.restaurant-right img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: filter 0.2s ease;
+}
+
+.restaurant-card:hover .restaurant-right img {
+  filter: brightness(1.1);
+}
+
+/* Dark mode adjustments for logo */
+.restaurant-card.dark-mode .restaurant-right {
+  border-color: #333;
+  background-color: #fff;
+}
+
+.restaurant-card.dark-mode.selected .restaurant-right {
+  border-color: var(--primary-color);
+}
