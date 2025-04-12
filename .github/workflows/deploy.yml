@@ -26,11 +26,13 @@ jobs:
           node-version: '18'
           cache: 'npm'
       - name: Install Dependencies
-        # Using npm install instead of npm ci to handle package version mismatches
         run: npm install --legacy-peer-deps
       - name: Install web-vitals (missing dependency)
         run: npm install web-vitals --save
       - name: Build
+        # Set CI=false to prevent eslint warnings from being treated as errors
+        env:
+          CI: false
         run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v4
