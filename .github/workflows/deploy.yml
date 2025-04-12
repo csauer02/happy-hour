@@ -26,7 +26,8 @@ jobs:
           node-version: '18'
           cache: 'npm'
       - name: Install Dependencies
-        run: npm ci
+        # Using npm install instead of npm ci to handle package version mismatches
+        run: npm install --legacy-peer-deps
       - name: Build
         run: npm run build
       - name: Setup Pages
