@@ -10,6 +10,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
   const googleMapRef = useRef(null);
   const geocoderRef = useRef(null);
   const markersRef = useRef({});
+  const activeInfoWindowRef = useRef(null); // Reference to track active info window
   const [userLocation, setUserLocation] = useState(null);
   const [mapTheme, setMapTheme] = useState(null);
   const mapInitializedRef = useRef(false);
@@ -144,7 +145,8 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
           setUserLocation(userPos);
           
           if (googleMapRef.current) {
-            googleMapRef.current.panTo(userPos);
+            // Skip animation, set directly
+            googleMapRef.current.setCenter(userPos);
             googleMapRef.current.setZoom(14);
             
             // Add user location marker
@@ -167,7 +169,8 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
         (error) => {
           console.error("Error getting location: ", error);
           alert("Unable to access your location. Please check your browser settings.");
-        }
+        },
+        { enableHighAccuracy: true } // Added high accuracy option
       );
     } else {
       alert("Geolocation is not supported by your browser.");
@@ -187,11 +190,21 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false, // Removed fullscreen option
-        styles: darkMode ? darkMapStyle : lightMapStyle // Apply theme based on mode
+        styles: darkMode ? darkMapStyle : lightMapStyle, // Apply theme based on mode
+        gestureHandling: 'cooperative', // Improves mobile scrolling experience
+        // Disable animations
+        animatedZoom: false
       };
       
       const map = new window.google.maps.Map(mapContainerRef.current, mapOptions);
       const geocoder = new window.google.maps.Geocoder();
+      
+      // Add passive event listeners to fix touchmove/touchstart warnings
+      if (map.getDiv()) {
+        // Touch listeners with passive: true option
+        mapContainerRef.current.addEventListener('touchstart', (e) => {}, { passive: true });
+        mapContainerRef.current.addEventListener('touchmove', (e) => {}, { passive: true });
+      }
       
       googleMapRef.current = map;
       geocoderRef.current = geocoder;
@@ -208,15 +221,35 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       
       map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(nearMeControlDiv);
       
+      // Add global map click handler to close any open info windows
+      map.addListener('click', () => {
+        closeActiveInfoWindow();
+      });
+      
       console.log("Map initialized successfully");
     } catch (error) {
       console.error("Error initializing map:", error);
     }
   }, [darkMode, handleNearMe, lightMapStyle, darkMapStyle, setMapRef]);
   
+  // Helper to close active info window
+  const closeActiveInfoWindow = () => {
+    if (activeInfoWindowRef.current) {
+      try {
+        activeInfoWindowRef.current.setMap(null);
+        activeInfoWindowRef.current = null;
+      } catch (error) {
+        console.error("Error closing info window:", error);
+      }
+    }
+  };
+  
   // Create custom info window style (using custom overlay)
   const createCustomInfoWindow = useCallback((content, marker) => {
     if (!googleMapRef.current) return null;
+    
+    // Close any existing info window first
+    closeActiveInfoWindow();
     
     const CustomInfoWindow = function(content, position) {
       this.content = content;
@@ -272,8 +305,10 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       closeButton.style.cursor = 'pointer';
       closeButton.style.color = darkMode ? '#aaa' : '#666';
       closeButton.innerHTML = '×';
-      closeButton.addEventListener('click', () => {
+      closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
         this.setMap(null);
+        activeInfoWindowRef.current = null;
       });
       div.appendChild(closeButton);
       
@@ -288,23 +323,28 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       const position = overlayProjection.fromLatLngToDivPixel(this.position);
       if (!position) return;
       
-      // Position the div above the marker
+      // Position the div to the side of the marker (not directly above it)
       const div = this.div;
-      div.style.left = position.x - 100 + 'px'; // Center horizontally
-      div.style.top = position.y - div.offsetHeight - 10 + 'px'; // Position above pin
+      
+      // Calculate the marker's height to avoid overlap
+      const markerHeight = 40; // Approximate height of marker
+      
+      // Position the info window to the right of the marker
+      div.style.left = (position.x + 20) + 'px'; // Offset to right
+      div.style.top = (position.y - (div.offsetHeight / 2)) + 'px'; // Center vertically
       
       // Add a little arrow pointing to pin
       const arrow = div.querySelector('.info-window-arrow') || document.createElement('div');
       arrow.className = 'info-window-arrow';
       arrow.style.position = 'absolute';
-      arrow.style.bottom = '-8px';
-      arrow.style.left = '50%';
-      arrow.style.marginLeft = '-8px';
+      arrow.style.left = '-8px'; // Point to the left
+      arrow.style.top = '50%';
+      arrow.style.marginTop = '-8px';
       arrow.style.width = '0';
       arrow.style.height = '0';
-      arrow.style.borderLeft = '8px solid transparent';
-      arrow.style.borderRight = '8px solid transparent';
-      arrow.style.borderTop = darkMode ? '8px solid #333' : '8px solid #fff';
+      arrow.style.borderTop = '8px solid transparent';
+      arrow.style.borderBottom = '8px solid transparent';
+      arrow.style.borderRight = darkMode ? '8px solid #333' : '8px solid #fff'; // Point left
       arrow.style.zIndex = '1';
       
       if (!div.contains(arrow)) {
@@ -332,7 +372,12 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     };
     
     // Create and return a new instance
-    return new CustomInfoWindow(content, marker.getPosition());
+    const infoWindow = new CustomInfoWindow(content, marker.getPosition());
+    
+    // Store reference to active info window
+    activeInfoWindowRef.current = infoWindow;
+    
+    return infoWindow;
   }, [darkMode]);
   
   // Helper function to create Near Me button
@@ -428,7 +473,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       
       // Create and append the script
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${callbackName}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${callbackName}&loading=async`;
       script.async = true;
       script.defer = true;
       
@@ -488,27 +533,22 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     }
   }, []);
   
-  // Smooth pan and zoom to a marker
-  const smoothPanToMarker = useCallback((marker, map) => {
+  // Set center and zoom directly without animation
+  const centerMapOnMarker = useCallback((marker, map) => {
     if (!marker || !map) return;
     
     try {
       const position = marker.getPosition();
       if (!position) return;
       
-      // First pan
-      map.panTo(position);
+      // Set directly without animation
+      map.setCenter(position);
+      map.setZoom(16);
       
-      // Then zoom after a short delay to create a smooth effect
-      setTimeout(() => {
-        map.setZoom(16);
-        // Bounce after pan and zoom completes
-        setTimeout(() => {
-          bounceMarker(marker);
-        }, 300);
-      }, 300);
+      // Bounce the marker
+      bounceMarker(marker);
     } catch (error) {
-      console.error("Error panning to marker:", error);
+      console.error("Error centering on marker:", error);
     }
   }, [bounceMarker]);
   
@@ -536,23 +576,54 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       });
       
       if (hasMarkers) {
-        // Fit bounds with padding
+        // Close any open info window
+        closeActiveInfoWindow();
+        
+        // Fit bounds directly without animation
         googleMapRef.current.fitBounds(bounds, 80); // 80 pixels padding
         
-        // Limit maximum zoom level
-        const listener = googleMapRef.current.addListener('idle', () => {
-          if (googleMapRef.current && googleMapRef.current.getZoom() > 15) {
-            googleMapRef.current.setZoom(15);
-          }
-          if (window.google && window.google.maps) {
-            window.google.maps.event.removeListener(listener);
-          }
-        });
+        // Limit maximum zoom level directly
+        if (googleMapRef.current.getZoom() > 15) {
+          googleMapRef.current.setZoom(15);
+        }
       }
     } catch (error) {
       console.error("Error zooming to neighborhood:", error);
     }
   }, [bounceMarker]);
+  
+  // Show info window for selected venue
+  useEffect(() => {
+    if (!mapInitializedRef.current || !googleMapRef.current || !selectedVenue) {
+      return;
+    }
+    
+    try {
+      const marker = markersRef.current[selectedVenue.id];
+      if (marker) {
+        // Create info window content
+        const infoContent = `
+          <div style="font-family: 'Roboto', sans-serif; max-width: 200px; padding: 5px;">
+            <div style="font-weight: bold; color: ${darkMode ? '#b77fdb' : '#750787'}; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid ${darkMode ? '#b77fdb' : '#750787'}; padding-bottom: 4px;">
+              ${selectedVenue.RestaurantName || 'Venue'}
+            </div>
+            <div style="font-size: 12px; margin-bottom: 6px;">${selectedVenue.Deal || ''}</div>
+            <div style="font-size: 11px; color: ${darkMode ? '#aaa' : '#666'}; font-style: italic; margin-top: 4px;">
+              ${selectedVenue.Neighborhood || ''}
+            </div>
+          </div>
+        `;
+        
+        // Show the info window
+        createCustomInfoWindow(infoContent, marker);
+        
+        // Center on the selected marker without animation
+        centerMapOnMarker(marker, googleMapRef.current);
+      }
+    } catch (error) {
+      console.error("Error showing info window for selected venue:", error);
+    }
+  }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker]);
   
   // Create or update markers when venues or map changes
   useEffect(() => {
@@ -579,15 +650,10 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
             // Store neighborhood for reference
             markersRef.current[venue.id]._neighborhood = venue.Neighborhood || 'Uncategorized';
             
-            // If this is the selected venue, animate it
-            if (isSelected) {
-              smoothPanToMarker(markersRef.current[venue.id], googleMapRef.current);
-            }
+            return;
           } catch (error) {
             console.error("Error updating existing marker:", error);
           }
-          
-          return;
         }
         
         // Extract address from Google Maps URL if available
@@ -601,57 +667,22 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                   const isSelected = selectedVenue && selectedVenue.id === venue.id;
                   
                   try {
-                    // Create marker
+                    // Create marker with traditional API
                     const marker = new window.google.maps.Marker({
                       position: results[0].geometry.location,
                       map: googleMapRef.current,
                       title: venue.RestaurantName || 'Venue',
                       icon: createPinSVG(getPinColor(venue.id), isSelected),
-                      animation: window.google.maps.Animation.DROP,
+                      animation: null, // No animation
                       zIndex: isSelected ? 999 : 1
                     });
                     
                     // Store neighborhood for reference
                     marker._neighborhood = venue.Neighborhood || 'Uncategorized';
                     
-                    // Add info window with improved styling
+                    // Add click handler
                     marker.addListener('click', () => {
                       onMarkerClick(venue.id);
-                    });
-                    
-                    // Create improved styled info window content
-                    const infoContent = `
-                      <div style="font-family: 'Roboto', sans-serif; max-width: 200px; padding: 5px;">
-                        <div style="font-weight: bold; color: ${darkMode ? '#b77fdb' : '#750787'}; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid ${darkMode ? '#b77fdb' : '#750787'}; padding-bottom: 4px;">
-                          ${venue.RestaurantName || 'Venue'}
-                        </div>
-                        <div style="font-size: 12px; margin-bottom: 6px;">${venue.Deal || ''}</div>
-                        <div style="font-size: 11px; color: ${darkMode ? '#aaa' : '#666'}; font-style: italic; margin-top: 4px;">
-                          ${venue.Neighborhood || ''}
-                        </div>
-                      </div>
-                    `;
-                    
-                    let infoWindow = null;
-                    
-                    marker.addListener('mouseover', () => {
-                      // Close any open info windows
-                      if (infoWindow) infoWindow.setMap(null);
-                      
-                      // Create custom info window
-                      infoWindow = createCustomInfoWindow(infoContent, marker);
-                    });
-                    
-                    marker.addListener('mouseout', () => {
-                      // Only close if not selected
-                      if (infoWindow && selectedVenue && selectedVenue.id !== venue.id) {
-                        setTimeout(() => {
-                          if (infoWindow) {
-                            infoWindow.setMap(null);
-                            infoWindow = null;
-                          }
-                        }, 300); // Slight delay to prevent flickering
-                      }
                     });
                     
                     markersRef.current[venue.id] = marker;
@@ -662,11 +693,29 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                       [venue.id]: marker
                     }));
                     
-                    // If this is the selected venue, animate it after a short delay
-                    if (isSelected) {
+                    // If this is the selected venue, show info window after creation
+                    if (isSelected && selectedVenue) {
                       setTimeout(() => {
-                        smoothPanToMarker(marker, googleMapRef.current);
-                      }, 500);
+                        const marker = markersRef.current[venue.id];
+                        if (marker) {
+                          // Create info window content
+                          const infoContent = `
+                            <div style="font-family: 'Roboto', sans-serif; max-width: 200px; padding: 5px;">
+                              <div style="font-weight: bold; color: ${darkMode ? '#b77fdb' : '#750787'}; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid ${darkMode ? '#b77fdb' : '#750787'}; padding-bottom: 4px;">
+                                ${selectedVenue.RestaurantName || 'Venue'}
+                              </div>
+                              <div style="font-size: 12px; margin-bottom: 6px;">${selectedVenue.Deal || ''}</div>
+                              <div style="font-size: 11px; color: ${darkMode ? '#aaa' : '#666'}; font-style: italic; margin-top: 4px;">
+                                ${selectedVenue.Neighborhood || ''}
+                              </div>
+                            </div>
+                          `;
+                          
+                          // Show info window and center on marker
+                          createCustomInfoWindow(infoContent, marker);
+                          centerMapOnMarker(marker, googleMapRef.current);
+                        }
+                      }, 100);
                     }
                   } catch (error) {
                     console.error("Error creating marker:", error);
@@ -690,7 +739,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     setMarkers, 
     createPinSVG, 
     getPinColor, 
-    smoothPanToMarker, 
+    centerMapOnMarker, 
     darkMode, 
     createCustomInfoWindow
   ]);

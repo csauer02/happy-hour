@@ -17,6 +17,8 @@
   padding: 0 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
+  overflow: hidden; /* Prevent content from expanding the header */
+  white-space: nowrap; /* Prevent text wrapping in header */
 }
 
 /* Dark mode styles - lighter purple for better contrast */
@@ -30,12 +32,17 @@
 .logo {
   display: flex;
   align-items: center;
+  flex-shrink: 0; /* Prevent logo from shrinking */
+  min-width: 120px; /* Minimum width for logo */
 }
 
 .logo h1 {
   font-size: 1.2rem;
   font-weight: bold;
   margin: 0;
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Search container */
@@ -117,6 +124,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0; /* Prevent controls from shrinking */
 }
 
 .icon-button {
@@ -131,6 +139,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 .icon-button:hover {
@@ -163,12 +172,20 @@
   display: flex;
   gap: 1rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent filter controls from wrapping */
+  overflow-x: auto; /* Enable horizontal scrolling if needed */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  scrollbar-width: none; /* Hide scrollbar in Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+}
+
+#filter-controls::-webkit-scrollbar {
+  display: none; /* Hide scrollbar in Chrome/Safari */
 }
 
 #day-filter {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* Prevent day buttons from wrapping */
   gap: 0.4rem;
   justify-content: center;
 }
@@ -183,6 +200,8 @@
   font-weight: bold;
   color: #750787;
   transition: all 0.2s ease;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
+  min-width: max-content; /* Ensure minimum width based on content */
 }
 
 #day-filter button:hover {
@@ -224,6 +243,8 @@
   font-size: 0.85rem;
   color: white;
   font-weight: bold;
+  flex-shrink: 0; /* Prevent toggle from shrinking */
+  white-space: nowrap; /* Prevent text wrapping */
 }
 
 .switch {
@@ -231,6 +252,7 @@
   display: inline-block;
   width: 42px;
   height: 22px;
+  flex-shrink: 0; /* Prevent switch from shrinking */
 }
 
 .switch input {
@@ -310,6 +332,7 @@
   #filter-controls {
     justify-content: flex-end;
     flex: 1;
+    padding-left: 8px; /* Add a little padding */
   }
   
   #day-filter button {

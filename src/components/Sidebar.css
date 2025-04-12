@@ -46,6 +46,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  white-space: nowrap; /* Prevent text wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: auto;
+  min-height: 40px; /* Ensure minimum height */
 }
 
 .neighborhood-header:hover {
@@ -78,6 +83,8 @@
   padding: 0.1rem 0.5rem;
   font-size: 0.8rem;
   font-weight: normal;
+  margin-left: 8px;
+  flex-shrink: 0; /* Prevent badge from shrinking */
 }
 
 .active .venue-count {
@@ -180,5 +187,20 @@
     position: sticky;
     top: 0;
     z-index: 5;
+    font-size: 0.95rem; /* Slightly smaller font on mobile */
+    padding: 0.5rem 0.8rem; /* Slightly smaller padding */
+  }
+  
+  /* Ensure neighborhood header text is visible in small screens */
+  .neighborhood-header {
+    display: flex;
+    align-items: center;
+  }
+  
+  .neighborhood-header span:first-child {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
