@@ -33,6 +33,7 @@ jobs:
         # Set CI=false to prevent eslint warnings from being treated as errors
         env:
           CI: false
+          REACT_APP_GOOGLE_MAPS_API_KEY: ${{ secrets.REACT_APP_GOOGLE_MAPS_API_KEY }}
         run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v4
