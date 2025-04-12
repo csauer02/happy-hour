@@ -1,6 +1,6 @@
-/* Sidebar.css - Simplified styles for the Sidebar component */
+/* Sidebar.css - Core fixed version */
 
-/* Sidebar (Desktop/Landscape) */
+/* Main sidebar container */
 #sidebar {
   position: fixed;
   top: 60px;
@@ -12,8 +12,6 @@
   overflow-y: auto;
   z-index: 10;
   box-shadow: 2px 0 5px var(--card-shadow);
-  transition: var(--dark-transition);
-  scroll-behavior: smooth;
 }
 
 #sidebar.dark-mode {
@@ -23,23 +21,20 @@
 
 #venue-container {
   padding: 1rem;
+  /* Critical fix: create a new stacking context for the entire container */
+  transform-style: preserve-3d;
+  position: relative;
 }
 
 /* Restaurant Sections */
 .neighborhood-section {
-  margin-bottom: 0.5rem;
-  transition: opacity 0.3s ease;
+  /* Create proper containment */
+  contain: layout;
+  position: relative;
+  margin-bottom: 0.8rem;
 }
 
-.neighborhood-section.highlighted {
-  opacity: 1;
-}
-
-.neighborhood-section:not(.highlighted) {
-  opacity: 0.85; /* Less dimmed for better visibility */
-}
-
-/* Simplified sticky header styling */
+/* Sticky header */
 .neighborhood-header {
   position: sticky;
   top: 0;
@@ -50,19 +45,18 @@
   margin-bottom: 0.5rem;
   border-radius: 6px;
   font-size: 1rem;
-  z-index: 5;
+  z-index: 10;
   cursor: pointer;
-  transition: background-color 0.2s ease;
   box-shadow: 0 2px 4px var(--card-shadow);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 40px; /* Ensure minimum height */
+  min-height: 40px;
 }
 
 .neighborhood-header span:first-child {
   flex: 1;
-  white-space: nowrap; /* Prevent text wrapping */
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -71,18 +65,15 @@
   background: var(--primary-light);
 }
 
-/* Active neighborhood header */
 .neighborhood-header.active {
   background: var(--accent-color);
   color: var(--primary-color);
 }
 
-/* Dark mode active header */
 .dark-mode .neighborhood-header.active {
-  color: #333; /* Darker text for contrast on yellow background */
+  color: #333;
 }
 
-/* Expand/collapse icon */
 .expand-icon {
   font-size: 1.2rem;
   font-weight: bold;
@@ -91,7 +82,6 @@
   text-align: center;
 }
 
-/* Venue count badge */
 .venue-count {
   background: rgba(255,255,255,0.3);
   border-radius: 12px;
@@ -99,47 +89,54 @@
   font-size: 0.8rem;
   font-weight: normal;
   margin-left: 8px;
-  flex-shrink: 0; /* Prevent badge from shrinking */
+  flex-shrink: 0;
 }
 
 .active .venue-count {
   background: rgba(117, 7, 135, 0.2);
 }
 
-/* Simplified content transitions */
+/* Content container - critical fixes */
 .neighborhood-content {
-  max-height: 0;
+  display: none;
   overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
-  padding-top: 0;
-  padding-left: 0;
+  position: relative;
+  /* Create a will-change to establish a containing block for cards */
+  will-change: transform;
+  /* Important: Create a containing block for all descendant cards */
+  contain: content;
+}
+
+/* Venue list container */
+.venue-list {
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--accent-color);
+  /* Core containment for venue content */
+  contain: layout style;
+  position: relative;
+  /* Force hardware acceleration */
+  transform: translateZ(0);
 }
 
 /* Expanded content */
 .neighborhood-content.expanded {
-  max-height: 2000px; /* Large enough to fit any content */
-  opacity: 1;
-  padding-top: 8px;
-  padding-left: 0.5rem;
-  border-left: 3px solid var(--accent-color);
+  display: block;
+  /* Critical fix: ensure it behaves as a real containing block */
+  transform: translateZ(0);
 }
 
-/* Highlighted neighborhood content */
-.neighborhood-content.highlighted {
-  border-left: 3px solid var(--accent-color);
+/* Selected venue card highlight */
+.selected-venue-card {
+  box-shadow: 0 0 0 2px var(--primary-color) !important;
+  position: relative !important;
 }
 
 /* No Results Message */
 .no-results {
-  padding: 2rem 1rem;
+  padding: 1rem;
   text-align: center;
   color: var(--text-color);
   font-style: italic;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
 }
 
 .reset-filters-btn {
@@ -150,42 +147,9 @@
   border-radius: 20px;
   cursor: pointer;
   font-size: 0.9rem;
-  transition: all 0.2s ease;
 }
 
-.reset-filters-btn:hover {
-  background: var(--primary-light);
-  transform: translateY(-1px);
-}
-
-/* Custom scrollbar for sidebar */
-#sidebar::-webkit-scrollbar {
-  width: 8px;
-}
-
-#sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#sidebar::-webkit-scrollbar-thumb {
-  background: rgba(117, 7, 135, 0.3);
-  border-radius: 4px;
-}
-
-#sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(117, 7, 135, 0.5);
-}
-
-/* Dark mode scrollbar */
-#sidebar.dark-mode::-webkit-scrollbar-thumb {
-  background: rgba(183, 127, 219, 0.4);
-}
-
-#sidebar.dark-mode::-webkit-scrollbar-thumb:hover {
-  background: rgba(183, 127, 219, 0.6);
-}
-
-/* Mobile Portrait Adjustments - Improved */
+/* Mobile adjustments */
 @media (max-width: 800px) and (orientation: portrait) {
   #sidebar {
     position: static;
@@ -194,18 +158,10 @@
     max-height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--card-border);
-    box-shadow: 0 2px 5px var(--card-shadow);
-  }
-  
-  #venue-container {
-    padding: 0.5rem;
   }
   
   .neighborhood-header {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    font-size: 0.95rem; /* Slightly smaller font on mobile */
-    padding: 0.5rem 0.8rem; /* Slightly smaller padding */
+    font-size: 0.95rem;
+    padding: 0.5rem 0.8rem;
   }
 }

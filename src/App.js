@@ -82,6 +82,19 @@ export default function App() {
     });
   }, []);
   
+  // Update marker visibility based on filtered venues
+  const updateMarkerVisibility = useCallback((filteredList) => {
+    if (mapRef && Object.keys(markers).length) {
+      allVenues.forEach(venue => {
+        const marker = markers[venue.id];
+        if (marker) {
+          const isVisible = filteredList.some(v => v.id === venue.id);
+          marker.map = isVisible ? mapRef : null;
+        }
+      });
+    }
+  }, [mapRef, markers, allVenues]);
+  
   // Simplified filter application function
   const applyFilters = useCallback((day, isHappeningNow) => {
     let filtered = [...allVenues];
@@ -111,20 +124,7 @@ export default function App() {
     
     // Update marker visibility based on filtered venues
     updateMarkerVisibility(filtered);
-  }, [allVenues]);
-  
-  // Update marker visibility based on filtered venues
-  const updateMarkerVisibility = useCallback((filteredList) => {
-    if (mapRef && Object.keys(markers).length) {
-      allVenues.forEach(venue => {
-        const marker = markers[venue.id];
-        if (marker) {
-          const isVisible = filteredList.some(v => v.id === venue.id);
-          marker.map = isVisible ? mapRef : null;
-        }
-      });
-    }
-  }, [mapRef, markers, allVenues]);
+  }, [allVenues, updateMarkerVisibility]);
   
   // Effect to apply filters when filter state changes
   useEffect(() => {
@@ -140,16 +140,21 @@ export default function App() {
     localStorage.setItem('darkMode', newDarkMode.toString());
   };
   
-  // Simplified unified venue selection handler
+  // Simplified unified venue selection handler with improved selection handling
   const handleVenueSelect = (venueId) => {
+    // Always clear previous selection first
+    setSelectedVenue(null);
+    
+    // If venueId is null, we're just clearing the selection
     if (venueId === null) {
-      setSelectedVenue(null);
       return;
     }
     
+    // Find the venue in the venues array
     const selected = venues.find(v => v.id === venueId);
     if (!selected) return;
     
+    // Set the new selected venue
     setSelectedVenue(selected);
     
     // If selecting a venue, also select its neighborhood

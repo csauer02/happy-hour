@@ -11,26 +11,14 @@ const Sidebar = ({
   onNeighborhoodSelect, 
   selectedNeighborhood 
 }) => {
-  // Single expanded neighborhood state instead of tracking all collapsed states
   const [expandedNeighborhood, setExpandedNeighborhood] = useState(null);
   const sidebarRef = useRef(null);
-  
-  // Simplified scrolling function
-  const scrollToElement = (element, offset = 0) => {
-    if (!element || !sidebarRef.current) return;
-    
-    // Simple scroll with offset
-    sidebarRef.current.scrollTo({
-      top: element.offsetTop - offset,
-      behavior: 'smooth'
-    });
-  };
+  const previousVenueIdRef = useRef(null);
   
   // Group venues by neighborhood
   const getNeighborhoodGroups = () => {
     const groups = {};
     
-    // Group all venues by neighborhood
     allVenues.forEach(venue => {
       const neighborhood = venue.Neighborhood || 'Uncategorized';
       if (!groups[neighborhood]) {
@@ -42,25 +30,14 @@ const Sidebar = ({
     return groups;
   };
   
-  // Simplified neighborhood header click handler
+  // Handle neighborhood header click
   const handleNeighborhoodClick = (neighborhood) => {
-    // Toggle logic: if clicking the already expanded neighborhood, collapse it
     if (neighborhood === expandedNeighborhood) {
       setExpandedNeighborhood(null);
       onNeighborhoodSelect(null);
     } else {
       setExpandedNeighborhood(neighborhood);
       onNeighborhoodSelect(neighborhood);
-      
-      // Find and scroll to the neighborhood section with a small delay to let DOM update
-      setTimeout(() => {
-        const sectionElement = sidebarRef.current.querySelector(
-          `[data-neighborhood="${neighborhood}"]`
-        );
-        if (sectionElement) {
-          scrollToElement(sectionElement, 0);
-        }
-      }, 50);
     }
   };
   
@@ -69,40 +46,74 @@ const Sidebar = ({
     if (selectedNeighborhood !== expandedNeighborhood) {
       setExpandedNeighborhood(selectedNeighborhood);
     }
-    
-    // If a neighborhood is selected, scroll to it
-    if (selectedNeighborhood && sidebarRef.current) {
-      // Small delay to ensure DOM is updated
-      setTimeout(() => {
-        const sectionElement = sidebarRef.current.querySelector(
-          `[data-neighborhood="${selectedNeighborhood}"]`
-        );
-        if (sectionElement) {
-          scrollToElement(sectionElement, 0);
-        }
-      }, 50);
-    }
   }, [selectedNeighborhood, expandedNeighborhood]);
   
-  // When a venue is selected, make sure its card is visible
+  // Scroll to selected venue when it changes
   useEffect(() => {
-    if (selectedVenue && sidebarRef.current) {
-      // Make sure the venue's neighborhood is expanded
-      if (selectedVenue.Neighborhood !== expandedNeighborhood) {
-        setExpandedNeighborhood(selectedVenue.Neighborhood);
+    if (!selectedVenue) {
+      previousVenueIdRef.current = null;
+      return;
+    }
+    
+    // Skip if it's the same venue as before
+    if (previousVenueIdRef.current === selectedVenue.id) {
+      return;
+    }
+    
+    // Store the current venue id
+    previousVenueIdRef.current = selectedVenue.id;
+    
+    // Make sure neighborhood is expanded
+    if (selectedVenue.Neighborhood !== expandedNeighborhood) {
+      setExpandedNeighborhood(selectedVenue.Neighborhood);
+    }
+    
+    // Function that tries to scroll to the element with retries
+    const scrollToCard = (retryCount = 5) => {
+      if (!sidebarRef.current || retryCount <= 0) return;
+      
+      // Finding the card by multiple selectors for better reliability
+      const selectors = [
+        `[data-venue-id="${selectedVenue.id}"]`,
+        `#venue-card-${selectedVenue.id}`,
+        `.restaurant-card[data-venue-id="${selectedVenue.id}"]`
+      ];
+      
+      let card = null;
+      // Try each selector until we find the card
+      for (const selector of selectors) {
+        card = sidebarRef.current.querySelector(selector);
+        if (card) break;
       }
       
-      // Small delay to ensure DOM is updated after expansion
-      setTimeout(() => {
-        const cardElement = sidebarRef.current.querySelector(
-          `[data-venue-id="${selectedVenue.id}"]`
-        );
-        if (cardElement) {
-          // Scroll to the card with an offset to account for the header
-          scrollToElement(cardElement, 60);
-        }
-      }, 100);
-    }
+      if (card) {
+        // Direct scroll approach for better reliability
+        const headerOffset = 60; // approximate header height
+        const cardPosition = card.offsetTop;
+        sidebarRef.current.scrollTop = cardPosition - headerOffset;
+        
+        // Mark the card as selected for CSS targeting
+        const allCards = sidebarRef.current.querySelectorAll('.restaurant-card');
+        allCards.forEach(c => c.classList.remove('selected-venue-card'));
+        card.classList.add('selected-venue-card');
+        
+        // Force the browser to recognize and render the card properly
+        card.style.display = 'flex';
+        // This will force a reflow, ensuring the card is visible
+        // eslint-disable-next-line no-unused-expressions
+        card.offsetHeight;
+      } else if (retryCount > 0) {
+        // Retry with increasing delay
+        setTimeout(() => scrollToCard(retryCount - 1), 150);
+      }
+    };
+    
+    // First attempt with a slight delay to allow for DOM updates
+    setTimeout(() => scrollToCard(), 100);
+    
+    // Additional attempts with increased delays for backup
+    setTimeout(() => scrollToCard(3), 300);
+    setTimeout(() => scrollToCard(2), 600);
   }, [selectedVenue, expandedNeighborhood]);
   
   const neighborhoodGroups = getNeighborhoodGroups();
@@ -130,17 +141,22 @@ const Sidebar = ({
                 <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
               </div>
               
-              <div className={`neighborhood-content ${isExpanded ? 'expanded' : 'collapsed'}`}>
-                {isExpanded && venuesInNeighborhood.map(venue => (
-                  <RestaurantCard 
-                    key={venue.id}
-                    venue={venue}
-                    isSelected={selectedVenue && selectedVenue.id === venue.id}
-                    onSelect={() => onVenueSelect(venue.id)}
-                    darkMode={darkMode}
-                    data-venue-id={venue.id}
-                  />
-                ))}
+              <div className={`neighborhood-content ${isExpanded ? 'expanded' : ''}`}>
+                {isExpanded && (
+                  <div className="venue-list">
+                    {venuesInNeighborhood.map(venue => (
+                      <RestaurantCard 
+                        key={venue.id}
+                        venue={venue}
+                        isSelected={selectedVenue && selectedVenue.id === venue.id}
+                        onSelect={() => onVenueSelect(venue.id)}
+                        darkMode={darkMode}
+                        data-venue-id={venue.id}
+                        id={`venue-card-${venue.id}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
