@@ -1,7 +1,19 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useEffect, useRef } from 'react';
 import './RestaurantCard.css';
 
 const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, ref) => {
+  const cardRef = useRef(null);
+  
+  // When card becomes selected, scroll it into view
+  useEffect(() => {
+    if (isSelected && cardRef.current) {
+      cardRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest'
+      });
+    }
+  }, [isSelected]);
+  
   // Function to get favicon URL from restaurant website
   const getFaviconUrl = (url) => {
     try {
@@ -16,7 +28,12 @@ const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, re
     <div 
       className={`restaurant-card ${isSelected ? 'selected' : ''} ${darkMode ? 'dark-mode' : ''}`}
       onClick={onSelect}
-      ref={ref}
+      ref={(el) => {
+        // Forward the ref if provided
+        if (ref) ref(el);
+        // Also store locally
+        cardRef.current = el;
+      }}
     >
       <div className="restaurant-left">
         <div className="restaurant-top">

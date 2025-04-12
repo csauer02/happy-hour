@@ -536,11 +536,19 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
   
   // Show info window for selected venue
   useEffect(() => {
-    if (!mapInitializedRef.current || !googleMapRef.current || !selectedVenue) {
+    if (!mapInitializedRef.current || !googleMapRef.current) {
       return;
     }
     
     try {
+      // First close any existing info window
+      closeActiveInfoWindow();
+      
+      // If no venue is selected, just return
+      if (!selectedVenue) {
+        return;
+      }
+      
       const marker = markersRef.current[selectedVenue.id];
       if (marker) {
         // Create info window content
@@ -565,7 +573,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     } catch (error) {
       console.error("Error showing info window for selected venue:", error);
     }
-  }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker]);
+  }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker, closeActiveInfoWindow]);
   
   // Create or update markers when venues or map changes
   useEffect(() => {
@@ -635,15 +643,18 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                       title: venue.RestaurantName || 'Venue',
                       content: pinElement
                     });
-                    
+
                     // Store neighborhood for reference
                     marker._neighborhood = venue.Neighborhood || 'Uncategorized';
-                    
-                    // Add click event listener
+
+                    // Add click event listener - use 'click' as required by the API
                     marker.addEventListener('click', () => {
+                      // First clear any existing info window
+                      closeActiveInfoWindow();
+                      // Then set the new selected venue
                       onMarkerClick(venue.id);
                     });
-                    
+
                     // Store marker reference
                     markersRef.current[venue.id] = marker;
                     
@@ -702,20 +713,9 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     centerMapOnMarker, 
     darkMode, 
     createCustomInfoWindow,
-    filteredVenues
+    filteredVenues,
+    closeActiveInfoWindow
   ]);
-  
-  // Update marker visibility when filteredVenues changes
-  useEffect(() => {
-    if (!mapInitializedRef.current || !googleMapRef.current) return;
-    
-    Object.entries(markersRef.current).forEach(([venueId, marker]) => {
-      if (marker) {
-        const isVisible = filteredVenues.some(v => v.id.toString() === venueId);
-        marker.map = isVisible ? googleMapRef.current : null;
-      }
-    });
-  }, [filteredVenues]);
   
   // Effect to handle neighborhood zoom when selected neighborhood changes
   useEffect(() => {
