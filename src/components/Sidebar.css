@@ -1,4 +1,4 @@
-/* Sidebar.css - Styles for the Sidebar component */
+/* Sidebar.css - Simplified styles for the Sidebar component */
 
 /* Sidebar (Desktop/Landscape) */
 #sidebar {
@@ -13,6 +13,7 @@
   z-index: 10;
   box-shadow: 2px 0 5px var(--card-shadow);
   transition: var(--dark-transition);
+  scroll-behavior: smooth;
 }
 
 #sidebar.dark-mode {
@@ -38,6 +39,7 @@
   opacity: 0.85; /* Less dimmed for better visibility */
 }
 
+/* Simplified sticky header styling */
 .neighborhood-header {
   position: sticky;
   top: 0;
@@ -50,12 +52,11 @@
   font-size: 1rem;
   z-index: 5;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
   box-shadow: 0 2px 4px var(--card-shadow);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: auto;
   min-height: 40px; /* Ensure minimum height */
 }
 
@@ -68,25 +69,17 @@
 
 .neighborhood-header:hover {
   background: var(--primary-light);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px var(--card-shadow);
 }
 
 /* Active neighborhood header */
 .neighborhood-header.active {
   background: var(--accent-color);
   color: var(--primary-color);
-  box-shadow: 0 3px 8px rgba(0,0,0,0.15);
-}
-
-.neighborhood-header.active:hover {
-  background: #fff0a0; /* Lighter yellow when active and hovered */
 }
 
 /* Dark mode active header */
 .dark-mode .neighborhood-header.active {
   color: #333; /* Darker text for contrast on yellow background */
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
 }
 
 /* Expand/collapse icon */
@@ -94,7 +87,6 @@
   font-size: 1.2rem;
   font-weight: bold;
   margin-left: 8px;
-  transition: transform 0.2s ease;
   width: 20px;
   text-align: center;
 }
@@ -114,33 +106,28 @@
   background: rgba(117, 7, 135, 0.2);
 }
 
+/* Simplified content transitions */
 .neighborhood-content {
-  transition: all 0.3s ease;
-  max-height: 2000px; /* Large value to accommodate any number of venues */
-  overflow: hidden;
-  opacity: 1;
-  margin-bottom: 1rem;
-  padding-top: 8px; /* Add space at top to prevent cards from being hidden under header */
-}
-
-/* Collapsed content */
-.neighborhood-content.collapsed {
   max-height: 0;
-  margin: 0;
-  padding: 0;
+  overflow: hidden;
   opacity: 0;
+  transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+  padding-top: 0;
+  padding-left: 0;
 }
 
-/* Expanded content effect */
+/* Expanded content */
 .neighborhood-content.expanded {
-  padding-left: 0.3rem;
+  max-height: 2000px; /* Large enough to fit any content */
+  opacity: 1;
+  padding-top: 8px;
+  padding-left: 0.5rem;
   border-left: 3px solid var(--accent-color);
 }
 
 /* Highlighted neighborhood content */
 .neighborhood-content.highlighted {
   border-left: 3px solid var(--accent-color);
-  padding-left: 0.5rem;
 }
 
 /* No Results Message */
@@ -169,16 +156,6 @@
 .reset-filters-btn:hover {
   background: var(--primary-light);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--card-shadow);
-}
-
-/* Dark mode styles */
-.dark-mode .reset-filters-btn {
-  background: var(--primary-color);
-}
-
-.dark-mode .reset-filters-btn:hover {
-  background: var(--primary-light);
 }
 
 /* Custom scrollbar for sidebar */
@@ -218,7 +195,6 @@
     border-right: none;
     border-bottom: 1px solid var(--card-border);
     box-shadow: 0 2px 5px var(--card-shadow);
-    top: 80px; /* Adjusted for expanded header */
   }
   
   #venue-container {
@@ -231,18 +207,5 @@
     z-index: 5;
     font-size: 0.95rem; /* Slightly smaller font on mobile */
     padding: 0.5rem 0.8rem; /* Slightly smaller padding */
-  }
-  
-  /* Ensure neighborhood header text is visible in small screens */
-  .neighborhood-header {
-    display: flex;
-    align-items: center;
-  }
-  
-  .neighborhood-header span:first-child {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 }

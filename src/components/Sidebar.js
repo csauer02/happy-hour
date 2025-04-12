@@ -11,11 +11,22 @@ const Sidebar = ({
   onNeighborhoodSelect, 
   selectedNeighborhood 
 }) => {
-  // State for tracking collapsed neighborhood sections
-  const [collapsedSections, setCollapsedSections] = useState({});
+  // Single expanded neighborhood state instead of tracking all collapsed states
+  const [expandedNeighborhood, setExpandedNeighborhood] = useState(null);
   const sidebarRef = useRef(null);
   
-  // Group venues by neighborhood - using allVenues instead of filtered venues
+  // Simplified scrolling function
+  const scrollToElement = (element, offset = 0) => {
+    if (!element || !sidebarRef.current) return;
+    
+    // Simple scroll with offset
+    sidebarRef.current.scrollTo({
+      top: element.offsetTop - offset,
+      behavior: 'smooth'
+    });
+  };
+  
+  // Group venues by neighborhood
   const getNeighborhoodGroups = () => {
     const groups = {};
     
@@ -31,65 +42,68 @@ const Sidebar = ({
     return groups;
   };
   
-  // Handle neighborhood header click - toggle collapse and highlight
+  // Simplified neighborhood header click handler
   const handleNeighborhoodClick = (neighborhood) => {
-    // Toggle collapse state
-    setCollapsedSections(prev => {
-      const newState = { ...prev };
+    // Toggle logic: if clicking the already expanded neighborhood, collapse it
+    if (neighborhood === expandedNeighborhood) {
+      setExpandedNeighborhood(null);
+      onNeighborhoodSelect(null);
+    } else {
+      setExpandedNeighborhood(neighborhood);
+      onNeighborhoodSelect(neighborhood);
       
-      // If clicking the currently selected neighborhood, just toggle its collapsed state
-      if (neighborhood === selectedNeighborhood) {
-        newState[neighborhood] = !prev[neighborhood];
-      } 
-      // If clicking a different neighborhood, expand it and collapse all others
-      else {
-        // First collapse all other sections
-        Object.keys(newState).forEach(key => {
-          if (key !== neighborhood) {
-            newState[key] = true;
-          }
-        });
-        // Then make sure the clicked one is expanded
-        newState[neighborhood] = false;
-      }
-      
-      return newState;
-    });
-    
-    // Update selected neighborhood - for highlighting only
-    onNeighborhoodSelect(neighborhood === selectedNeighborhood ? null : neighborhood);
+      // Find and scroll to the neighborhood section with a small delay to let DOM update
+      setTimeout(() => {
+        const sectionElement = sidebarRef.current.querySelector(
+          `[data-neighborhood="${neighborhood}"]`
+        );
+        if (sectionElement) {
+          scrollToElement(sectionElement, 0);
+        }
+      }, 50);
+    }
   };
   
-  // Effect to initialize collapsed state when neighborhoods change
+  // Update expanded neighborhood when selectedNeighborhood changes
   useEffect(() => {
-    const groups = getNeighborhoodGroups();
-    const initialState = {};
-    
-    Object.keys(groups).forEach(neighborhood => {
-      // If this is the selected neighborhood, don't collapse it
-      initialState[neighborhood] = neighborhood !== selectedNeighborhood;
-    });
-    
-    setCollapsedSections(initialState);
-  }, [selectedNeighborhood, allVenues]);
-  
-  // Effect to scroll to the selected neighborhood
-  useEffect(() => {
-    if (selectedNeighborhood && sidebarRef.current) {
-      // Find the selected neighborhood section
-      const sectionElement = sidebarRef.current.querySelector(
-        `.neighborhood-section[data-neighborhood="${selectedNeighborhood}"]`
-      );
-      
-      if (sectionElement) {
-        // Scroll the section into view 
-        sectionElement.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start'
-        });
-      }
+    if (selectedNeighborhood !== expandedNeighborhood) {
+      setExpandedNeighborhood(selectedNeighborhood);
     }
-  }, [selectedNeighborhood]);
+    
+    // If a neighborhood is selected, scroll to it
+    if (selectedNeighborhood && sidebarRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        const sectionElement = sidebarRef.current.querySelector(
+          `[data-neighborhood="${selectedNeighborhood}"]`
+        );
+        if (sectionElement) {
+          scrollToElement(sectionElement, 0);
+        }
+      }, 50);
+    }
+  }, [selectedNeighborhood, expandedNeighborhood]);
+  
+  // When a venue is selected, make sure its card is visible
+  useEffect(() => {
+    if (selectedVenue && sidebarRef.current) {
+      // Make sure the venue's neighborhood is expanded
+      if (selectedVenue.Neighborhood !== expandedNeighborhood) {
+        setExpandedNeighborhood(selectedVenue.Neighborhood);
+      }
+      
+      // Small delay to ensure DOM is updated after expansion
+      setTimeout(() => {
+        const cardElement = sidebarRef.current.querySelector(
+          `[data-venue-id="${selectedVenue.id}"]`
+        );
+        if (cardElement) {
+          // Scroll to the card with an offset to account for the header
+          scrollToElement(cardElement, 60);
+        }
+      }, 100);
+    }
+  }, [selectedVenue, expandedNeighborhood]);
   
   const neighborhoodGroups = getNeighborhoodGroups();
   
@@ -98,7 +112,7 @@ const Sidebar = ({
       <div id="venue-container">
         {Object.keys(neighborhoodGroups).sort().map(neighborhood => {
           const isSelected = selectedNeighborhood === neighborhood;
-          const isCollapsed = collapsedSections[neighborhood];
+          const isExpanded = expandedNeighborhood === neighborhood;
           const venuesInNeighborhood = neighborhoodGroups[neighborhood];
           
           return (
@@ -113,17 +127,18 @@ const Sidebar = ({
               >
                 <span>{neighborhood}</span>
                 <span className="venue-count">{venuesInNeighborhood.length}</span>
-                <span className="expand-icon">{isCollapsed ? '+' : '-'}</span>
+                <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
               </div>
               
-              <div className={`neighborhood-content ${isSelected ? 'highlighted' : ''} ${isCollapsed ? 'collapsed' : 'expanded'}`}>
-                {!isCollapsed && venuesInNeighborhood.map(venue => (
+              <div className={`neighborhood-content ${isExpanded ? 'expanded' : 'collapsed'}`}>
+                {isExpanded && venuesInNeighborhood.map(venue => (
                   <RestaurantCard 
                     key={venue.id}
                     venue={venue}
                     isSelected={selectedVenue && selectedVenue.id === venue.id}
                     onSelect={() => onVenueSelect(venue.id)}
                     darkMode={darkMode}
+                    data-venue-id={venue.id}
                   />
                 ))}
               </div>
@@ -136,11 +151,7 @@ const Sidebar = ({
             <p>No venues match your current filters.</p>
             <button 
               className="reset-filters-btn"
-              onClick={() => {
-                // Signal to reset all filters
-                onNeighborhoodSelect(null);
-                // Additional reset logic would be handled in parent component
-              }}
+              onClick={() => onNeighborhoodSelect(null)}
             >
               Reset Filters
             </button>

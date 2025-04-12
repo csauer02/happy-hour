@@ -41,11 +41,6 @@ export default function App() {
       const savedDarkMode = localStorage.getItem('darkMode') === 'true';
       setDarkMode(savedDarkMode);
     }
-    
-    // Apply dark mode class to body
-    if (darkMode) {
-      document.body.classList.add('dark-mode');
-    }
   }, []);
   
   // Effect to apply dark mode class to body when darkMode changes
@@ -87,9 +82,9 @@ export default function App() {
     });
   }, []);
   
-  // Filter application helper function - modified to NOT filter by neighborhood
-  const applyFilters = useCallback((venueList, day, isHappeningNow) => {
-    let filtered = [...venueList];
+  // Simplified filter application function
+  const applyFilters = useCallback((day, isHappeningNow) => {
+    let filtered = [...allVenues];
     
     // Apply day filter
     if (day !== 'all') {
@@ -111,12 +106,12 @@ export default function App() {
       }
     }
     
-    // Set filtered venues without applying neighborhood filter
+    // Set filtered venues
     setFilteredVenues(filtered);
     
     // Update marker visibility based on filtered venues
     updateMarkerVisibility(filtered);
-  }, []);
+  }, [allVenues]);
   
   // Update marker visibility based on filtered venues
   const updateMarkerVisibility = useCallback((filteredList) => {
@@ -133,9 +128,8 @@ export default function App() {
   
   // Effect to apply filters when filter state changes
   useEffect(() => {
-    // Apply regular filters
-    applyFilters(allVenues, activeDay, happeningNow);
-  }, [activeDay, happeningNow, allVenues, applyFilters]);
+    applyFilters(activeDay, happeningNow);
+  }, [activeDay, happeningNow, applyFilters]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -146,7 +140,7 @@ export default function App() {
     localStorage.setItem('darkMode', newDarkMode.toString());
   };
   
-  // Handle venue selection
+  // Simplified unified venue selection handler
   const handleVenueSelect = (venueId) => {
     if (venueId === null) {
       setSelectedVenue(null);
@@ -154,26 +148,29 @@ export default function App() {
     }
     
     const selected = venues.find(v => v.id === venueId);
+    if (!selected) return;
+    
     setSelectedVenue(selected);
     
     // If selecting a venue, also select its neighborhood
-    if (selected && selected.Neighborhood) {
+    if (selected.Neighborhood) {
       setSelectedNeighborhood(selected.Neighborhood);
     }
   };
   
-  // Handle neighborhood selection - MODIFIED: For highlighting only, not filtering
+  // Simplified neighborhood selection
   const handleNeighborhoodSelect = (neighborhood) => {
-    setSelectedNeighborhood(neighborhood);
-    
-    // If deselecting the current neighborhood, also clear selected venue
-    if (selectedVenue && neighborhood === null) {
+    // If deselecting current neighborhood, clear selected venue too
+    if (neighborhood === null && selectedVenue) {
       setSelectedVenue(null);
     }
+    
+    setSelectedNeighborhood(neighborhood);
   };
   
-  // Handle day filter change
+  // Handle day filter change - simplified
   const handleDayChange = (day) => {
+    // If clicking the active day, deselect it
     if (day === activeDay && day !== 'all') {
       setActiveDay('all');
     } else {
@@ -191,7 +188,7 @@ export default function App() {
     }
   };
   
-  // Handle happening now toggle
+  // Handle happening now toggle - simplified
   const handleHappeningNowToggle = () => {
     const newState = !happeningNow;
     setHappeningNow(newState);

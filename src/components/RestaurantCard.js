@@ -1,38 +1,7 @@
-import React, { forwardRef, useEffect, useRef } from 'react';
+import React from 'react';
 import './RestaurantCard.css';
 
-const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, ref) => {
-  const cardRef = useRef(null);
-  
-  // When card becomes selected, scroll it into view with proper offset
-  useEffect(() => {
-    if (isSelected && cardRef.current) {
-      // Get the parent neighborhood header
-      const neighborhoodHeader = cardRef.current.closest('.neighborhood-content')
-        ?.previousElementSibling;
-      
-      // If there's a neighborhood header, calculate its height for offset
-      const headerHeight = neighborhoodHeader ? neighborhoodHeader.offsetHeight + 10 : 0;
-      
-      // Use scrollIntoView with a scrollTo for better positioning
-      cardRef.current.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      
-      // Apply an offset to account for the sticky header
-      if (headerHeight > 0) {
-        setTimeout(() => {
-          const container = cardRef.current.closest('#sidebar');
-          if (container) {
-            const currentScroll = container.scrollTop;
-            container.scrollTo({
-              top: currentScroll - headerHeight,
-              behavior: 'smooth'
-            });
-          }
-        }, 100);
-      }
-    }
-  }, [isSelected]);
-  
+const RestaurantCard = ({ venue, isSelected, onSelect, darkMode, ...props }) => {
   // Function to get favicon URL from restaurant website
   const getFaviconUrl = (url) => {
     try {
@@ -47,12 +16,8 @@ const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, re
     <div 
       className={`restaurant-card ${isSelected ? 'selected' : ''} ${darkMode ? 'dark-mode' : ''}`}
       onClick={onSelect}
-      ref={(el) => {
-        // Forward the ref if provided
-        if (ref) ref(el);
-        // Also store locally
-        cardRef.current = el;
-      }}
+      data-venue-id={venue.id}
+      {...props}
     >
       <div className="restaurant-left">
         <div className="restaurant-top">
@@ -105,6 +70,6 @@ const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode }, re
       </div>
     </div>
   );
-});
+};
 
 export default RestaurantCard;
