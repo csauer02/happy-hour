@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './Sidebar.css';
 import RestaurantCard from './RestaurantCard';
 
@@ -13,6 +13,7 @@ const Sidebar = ({
 }) => {
   // State for tracking collapsed neighborhood sections
   const [collapsedSections, setCollapsedSections] = useState({});
+  const sidebarRef = useRef(null);
   
   // Group venues by neighborhood - using allVenues instead of filtered venues
   const getNeighborhoodGroups = () => {
@@ -72,10 +73,28 @@ const Sidebar = ({
     setCollapsedSections(initialState);
   }, [selectedNeighborhood, allVenues]);
   
+  // Effect to scroll to the selected neighborhood
+  useEffect(() => {
+    if (selectedNeighborhood && sidebarRef.current) {
+      // Find the selected neighborhood section
+      const sectionElement = sidebarRef.current.querySelector(
+        `.neighborhood-section[data-neighborhood="${selectedNeighborhood}"]`
+      );
+      
+      if (sectionElement) {
+        // Scroll the section into view 
+        sectionElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start'
+        });
+      }
+    }
+  }, [selectedNeighborhood]);
+  
   const neighborhoodGroups = getNeighborhoodGroups();
   
   return (
-    <section id="sidebar" className={darkMode ? 'dark-mode' : ''}>
+    <section id="sidebar" className={darkMode ? 'dark-mode' : ''} ref={sidebarRef}>
       <div id="venue-container">
         {Object.keys(neighborhoodGroups).sort().map(neighborhood => {
           const isSelected = selectedNeighborhood === neighborhood;
@@ -86,6 +105,7 @@ const Sidebar = ({
             <div 
               className={`neighborhood-section ${isSelected ? 'highlighted' : ''}`} 
               key={neighborhood}
+              data-neighborhood={neighborhood}
             >
               <div 
                 className={`neighborhood-header ${isSelected ? 'active' : ''}`}

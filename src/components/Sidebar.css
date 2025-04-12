@@ -48,7 +48,7 @@
   margin-bottom: 0.5rem;
   border-radius: 6px;
   font-size: 1rem;
-  z-index: 1;
+  z-index: 5;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px var(--card-shadow);
@@ -120,6 +120,7 @@
   overflow: hidden;
   opacity: 1;
   margin-bottom: 1rem;
+  padding-top: 8px; /* Add space at top to prevent cards from being hidden under header */
 }
 
 /* Collapsed content */

@@ -18,7 +18,6 @@ export default function App() {
   const [mapRef, setMapRef] = useState(null);
   const [markers, setMarkers] = useState({});
   const [darkMode, setDarkMode] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   
   // Check for system preferences and saved dark mode preference on initial load
@@ -88,30 +87,6 @@ export default function App() {
     });
   }, []);
   
-  // Search function
-  const handleSearch = useCallback((term) => {
-    setSearchTerm(term);
-    
-    // If search term is empty, just apply day/happening now filters
-    if (!term.trim()) {
-      applyFilters(allVenues, activeDay, happeningNow);
-      return;
-    }
-    
-    // Search through venues by name, deal, and neighborhood
-    const searchResults = allVenues.filter(venue => {
-      const lowerTerm = term.toLowerCase();
-      return (
-        (venue.RestaurantName && venue.RestaurantName.toLowerCase().includes(lowerTerm)) ||
-        (venue.Deal && venue.Deal.toLowerCase().includes(lowerTerm)) ||
-        (venue.Neighborhood && venue.Neighborhood.toLowerCase().includes(lowerTerm))
-      );
-    });
-    
-    // Apply other filters to search results (but not neighborhood filter)
-    applyFilters(searchResults, activeDay, happeningNow);
-  }, [allVenues, activeDay, happeningNow]);
-  
   // Filter application helper function - modified to NOT filter by neighborhood
   const applyFilters = useCallback((venueList, day, isHappeningNow) => {
     let filtered = [...venueList];
@@ -158,14 +133,9 @@ export default function App() {
   
   // Effect to apply filters when filter state changes
   useEffect(() => {
-    // If search is active, apply search and filters
-    if (searchTerm) {
-      handleSearch(searchTerm);
-    } else {
-      // Otherwise just apply regular filters
-      applyFilters(allVenues, activeDay, happeningNow);
-    }
-  }, [activeDay, happeningNow, allVenues, searchTerm, handleSearch, applyFilters]);
+    // Apply regular filters
+    applyFilters(allVenues, activeDay, happeningNow);
+  }, [activeDay, happeningNow, allVenues, applyFilters]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -237,26 +207,6 @@ export default function App() {
     }
   };
   
-  // Reset all filters
-  const handleResetFilters = () => {
-    setActiveDay('all');
-    setHappeningNow(false);
-    setSearchTerm('');
-    setSelectedNeighborhood(null);
-    setSelectedVenue(null);
-    setFilteredVenues(allVenues);
-    
-    // Reset marker visibility
-    if (mapRef && Object.keys(markers).length) {
-      allVenues.forEach(venue => {
-        const marker = markers[venue.id];
-        if (marker) {
-          marker.setMap(mapRef);
-        }
-      });
-    }
-  };
-  
   return (
     <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <Header 
@@ -264,10 +214,8 @@ export default function App() {
         happeningNow={happeningNow}
         onDayChange={handleDayChange}
         onHappeningNowToggle={handleHappeningNowToggle}
-        onSearch={handleSearch}
         darkMode={darkMode}
         onDarkModeToggle={handleDarkModeToggle}
-        onResetFilters={handleResetFilters}
       />
       
       <main id="main-content">

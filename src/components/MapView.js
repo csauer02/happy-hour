@@ -647,8 +647,8 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                     // Store neighborhood for reference
                     marker._neighborhood = venue.Neighborhood || 'Uncategorized';
 
-                    // Add click event listener - use 'click' as required by the API
-                    marker.addEventListener('click', () => {
+                    // Add click event listener - use the proper method for accessibility
+                    marker.addListener('click', () => {
                       // First clear any existing info window
                       closeActiveInfoWindow();
                       // Then set the new selected venue
