@@ -1,15 +1,12 @@
-name: Deploy to GitHub Pages v2
-
+name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,7 +28,6 @@ jobs:
         uses: actions/upload-pages-artifact@v2
         with:
           path: './build'
-
   deploy:
     needs: build
     environment:
