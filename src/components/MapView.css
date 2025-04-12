@@ -64,6 +64,17 @@
   animation-timing-function: ease-out;
   max-width: 250px;
   z-index: 1001 !important; /* Make sure it appears above markers */
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  background-color: white;
+  font-family: 'Roboto', sans-serif;
+  overflow: hidden;
+}
+
+.dark-mode .custom-info-window {
+  background-color: #333;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  color: #f0f0f0;
 }
 
 @keyframes fadeIn {
@@ -77,6 +88,12 @@
   }
 }
 
+/* Styles for advanced markers with animation */
+@keyframes bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-10px); }
+}
+
 /* Fix for info window to always be visible even when marker is at edge of screen */
 .gm-style-iw {
   max-width: 300px !important;
@@ -87,7 +104,7 @@
   overflow: visible !important;
 }
 
-/* Mobile Portrait Adjustments - Improved for better mobile experience */
+/* Mobile Portrait Adjustments */
 @media (max-width: 800px) and (orientation: portrait) {
   #map-container {
     position: relative;
@@ -106,5 +123,15 @@
   /* Adjust info window position for mobile */
   .custom-info-window {
     max-width: 80vw !important;
+  }
+  
+  /* Increase size of interactive elements for mobile */
+  #map-favicon-overlay {
+    padding: 10px;
+  }
+  
+  #map-favicon-overlay img {
+    width: 36px;
+    height: 36px;
   }
 }

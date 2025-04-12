@@ -17,8 +17,6 @@
   padding: 0 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
-  overflow: hidden; /* Prevent content from expanding the header */
-  white-space: nowrap; /* Prevent text wrapping in header */
 }
 
 /* Dark mode styles - lighter purple for better contrast */
@@ -34,6 +32,7 @@
   align-items: center;
   flex-shrink: 0; /* Prevent logo from shrinking */
   min-width: 120px; /* Minimum width for logo */
+  margin-right: 15px; /* Add space after logo */
 }
 
 .logo h1 {
@@ -48,15 +47,9 @@
 /* Search container */
 .search-container {
   flex: 1;
-  max-width: 400px;
-  margin: 0 20px;
+  max-width: 300px;
   position: relative;
-}
-
-.search-container form {
-  display: flex;
-  align-items: center;
-  position: relative;
+  margin-right: 15px; /* Add space after search */
 }
 
 .search-container input {
@@ -75,9 +68,11 @@
   background: #fff;
 }
 
-.search-container button {
+.clear-search-btn {
   position: absolute;
-  right: 4px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: none;
   display: flex;
@@ -99,24 +94,19 @@
   color: #666;
 }
 
-.dark-mode .search-container button {
+.dark-mode .clear-search-btn {
   color: #42105e;
 }
 
-.search-container button:hover {
+.clear-search-btn:hover {
   background: rgba(117, 7, 135, 0.1);
 }
 
-.search-container button svg {
+.clear-search-btn svg {
   width: 18px;
   height: 18px;
   stroke: currentColor;
   fill: none;
-}
-
-/* Clear search button */
-.clear-search-btn {
-  right: 30px !important;
 }
 
 /* Search toggle and dark mode buttons */
@@ -125,6 +115,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0; /* Prevent controls from shrinking */
+  margin-left: auto; /* Push to right */
 }
 
 .icon-button {
@@ -154,33 +145,13 @@
   fill: none;
 }
 
-/* Reset filters button with rainbow effect on hover */
-.reset-filters:hover {
-  background: linear-gradient(
-    45deg, 
-    rgba(255, 0, 24, 0.3), 
-    rgba(255, 165, 44, 0.3), 
-    rgba(255, 255, 65, 0.3), 
-    rgba(0, 128, 24, 0.3), 
-    rgba(0, 0, 249, 0.3), 
-    rgba(134, 0, 125, 0.3)
-  );
-}
-
 /* Filter Controls & Buttons */
 #filter-controls {
   display: flex;
   gap: 1rem;
   align-items: center;
   flex-wrap: nowrap; /* Prevent filter controls from wrapping */
-  overflow-x: auto; /* Enable horizontal scrolling if needed */
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  scrollbar-width: none; /* Hide scrollbar in Firefox */
-  -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
-}
-
-#filter-controls::-webkit-scrollbar {
-  display: none; /* Hide scrollbar in Chrome/Safari */
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 #day-filter {
@@ -245,6 +216,7 @@
   font-weight: bold;
   flex-shrink: 0; /* Prevent toggle from shrinking */
   white-space: nowrap; /* Prevent text wrapping */
+  margin-left: 10px; /* Add space before toggle */
 }
 
 .switch {
@@ -297,6 +269,9 @@
 @media (max-width: 800px) {
   #global-header {
     padding: 0 0.5rem;
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
   }
   
   .logo h1 {
@@ -304,35 +279,26 @@
   }
   
   .search-container {
-    position: absolute;
-    top: 60px;
-    left: 0;
-    right: 0;
+    order: 3;
     max-width: 100%;
-    margin: 0;
-    background: #750787;
-    padding: 10px;
-    z-index: 999;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    display: none;
-  }
-  
-  .search-container.visible {
-    display: block;
-  }
-  
-  .dark-mode .search-container {
-    background: #42105e;
-  }
-  
-  .icon-button {
-    display: flex; /* Show in mobile */
+    width: 100%;
+    margin: 0.5rem 0;
+    padding: 0 0.5rem;
   }
   
   #filter-controls {
-    justify-content: flex-end;
-    flex: 1;
-    padding-left: 8px; /* Add a little padding */
+    order: 2;
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -ms-overflow-style: none; /* Hide scrollbar in IE/Edge */
+    scrollbar-width: none; /* Hide scrollbar in Firefox */
+  }
+  
+  #filter-controls::-webkit-scrollbar {
+    display: none; /* Hide scrollbar in Chrome/Safari */
   }
   
   #day-filter button {
@@ -341,6 +307,31 @@
   }
   
   .happening-now span {
-    display: none;
+    font-size: 0.8rem;
+  }
+  
+  .header-controls {
+    margin-left: auto;
+  }
+  
+  .icon-button {
+    width: 32px;
+    height: 32px;
+  }
+  
+  /* For very small screens */
+  @media (max-width: 375px) {
+    .logo h1 {
+      font-size: 0.9rem;
+    }
+    
+    #day-filter button {
+      padding: 0.25rem 0.4rem;
+      font-size: 0.7rem;
+    }
+    
+    .happening-now span {
+      display: none;
+    }
   }
 }

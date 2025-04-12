@@ -27,6 +27,15 @@
 /* Restaurant Sections */
 .neighborhood-section {
   margin-bottom: 0.5rem;
+  transition: opacity 0.3s ease;
+}
+
+.neighborhood-section.highlighted {
+  opacity: 1;
+}
+
+.neighborhood-section:not(.highlighted) {
+  opacity: 0.85; /* Less dimmed for better visibility */
 }
 
 .neighborhood-header {
@@ -36,7 +45,7 @@
   color: var(--section-text);
   padding: 0.6rem 1rem;
   font-weight: bold;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.5rem;
   border-radius: 6px;
   font-size: 1rem;
   z-index: 1;
@@ -46,11 +55,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: auto;
+  min-height: 40px; /* Ensure minimum height */
+}
+
+.neighborhood-header span:first-child {
+  flex: 1;
   white-space: nowrap; /* Prevent text wrapping */
   overflow: hidden;
   text-overflow: ellipsis;
-  height: auto;
-  min-height: 40px; /* Ensure minimum height */
 }
 
 .neighborhood-header:hover {
@@ -76,6 +89,16 @@
   box-shadow: 0 3px 8px rgba(0,0,0,0.3);
 }
 
+/* Expand/collapse icon */
+.expand-icon {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+  width: 20px;
+  text-align: center;
+}
+
 /* Venue count badge */
 .venue-count {
   background: rgba(255,255,255,0.3);
@@ -92,14 +115,31 @@
 }
 
 .neighborhood-content {
-  margin-bottom: 1.5rem;
   transition: all 0.3s ease;
+  max-height: 2000px; /* Large value to accommodate any number of venues */
+  overflow: hidden;
+  opacity: 1;
+  margin-bottom: 1rem;
+}
+
+/* Collapsed content */
+.neighborhood-content.collapsed {
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
 }
 
 /* Expanded content effect */
 .neighborhood-content.expanded {
   padding-left: 0.3rem;
   border-left: 3px solid var(--accent-color);
+}
+
+/* Highlighted neighborhood content */
+.neighborhood-content.highlighted {
+  border-left: 3px solid var(--accent-color);
+  padding-left: 0.5rem;
 }
 
 /* No Results Message */
@@ -172,11 +212,12 @@
   #sidebar {
     position: static;
     width: 100%;
-    height: 50%; /* Changed from 40% to 50% to match map */
+    height: 50%;
     max-height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--card-border);
     box-shadow: 0 2px 5px var(--card-shadow);
+    top: 80px; /* Adjusted for expanded header */
   }
   
   #venue-container {

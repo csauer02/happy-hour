@@ -1,25 +1,25 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import './MapView.css';
 
 // Create a global tracking variable to prevent multiple script loads
 let googleMapsLoaded = false;
 let googleMapsLoading = false;
 
-const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, darkMode, selectedNeighborhood }) => {
+const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, darkMode, selectedNeighborhood, filteredVenues }) => {
   const mapContainerRef = useRef(null);
   const googleMapRef = useRef(null);
   const geocoderRef = useRef(null);
   const markersRef = useRef({});
   const activeInfoWindowRef = useRef(null); // Reference to track active info window
-  const [userLocation, setUserLocation] = useState(null);
-  const [mapTheme, setMapTheme] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [userLocation, setUserLocation] = useState(null); // Using eslint-disable since this is needed for future features
   const mapInitializedRef = useRef(false);
   
   // Get Google Maps API key from environment variables
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
   
-  // Modern LGBTQIA+ pride flag colors (including trans/intersex/poc elements)
-  const flagColors = [
+  // Move flagColors to useMemo to avoid recreation on every render
+  const flagColors = useMemo(() => [
     '#FF0018', // Red
     '#FFA52C', // Orange
     '#FFFF41', // Yellow
@@ -31,110 +31,87 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     '#5BCEFA', // Trans blue
     '#FFDA00', // Intersex yellow
     '#613915'  // PoC brown
-  ];
+  ], []);
 
-  // Dark mode map styles
-  const darkMapStyle = [
-    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-    {
-      featureType: "administrative.locality",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#d59563" }],
-    },
-    {
-      featureType: "poi",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#d59563" }],
-    },
-    {
-      featureType: "poi",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "poi.park",
-      elementType: "geometry",
-      stylers: [{ color: "#263c3f" }],
-    },
-    {
-      featureType: "poi.park",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#6b9a76" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry",
-      stylers: [{ color: "#38414e" }],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry.stroke",
-      stylers: [{ color: "#212a37" }],
-    },
-    {
-      featureType: "road",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#9ca5b3" }],
-    },
-    {
-      featureType: "road.highway",
-      elementType: "geometry",
-      stylers: [{ color: "#746855" }],
-    },
-    {
-      featureType: "road.highway",
-      elementType: "geometry.stroke",
-      stylers: [{ color: "#1f2835" }],
-    },
-    {
-      featureType: "road.highway",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#f3d19c" }],
-    },
-    {
-      featureType: "transit",
-      elementType: "geometry",
-      stylers: [{ color: "#2f3948" }],
-    },
-    {
-      featureType: "transit.station",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#d59563" }],
-    },
-    {
-      featureType: "water",
-      elementType: "geometry",
-      stylers: [{ color: "#17263c" }],
-    },
-    {
-      featureType: "water",
-      elementType: "labels.text.fill",
-      stylers: [{ color: "#515c6d" }],
-    },
-    {
-      featureType: "water",
-      elementType: "labels.text.stroke",
-      stylers: [{ color: "#17263c" }],
-    },
-  ];
-
-  // Light mode map styles (simplified)
-  const lightMapStyle = [
-    {
-      featureType: "poi",
-      stylers: [{ visibility: "off" }],
-    }
-  ];
+  // Helper function to create a circle marker for user location (wrapped in useCallback)
+  const createCircleMarker = useCallback((color) => {
+    const div = document.createElement('div');
+    div.style.width = '16px';
+    div.style.height = '16px';
+    div.style.borderRadius = '50%';
+    div.style.backgroundColor = color;
+    div.style.border = '2px solid white';
+    div.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+    return div;
+  }, []);
   
   // Get a color based on venue id
   const getPinColor = useCallback((venueId) => {
     return flagColors[venueId % flagColors.length];
+  }, [flagColors]);
+  
+  // Create pin element for markers - returns a DOM Node directly, not a Promise
+  const createPinElement = useCallback((color = '#FF0000', isSelected = false) => {
+    // Create SVG marker using basic DOM methods
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${isSelected ? '36' : '28'}" height="${isSelected ? '36' : '28'}">
+        <path 
+          fill="${color}" 
+          stroke="#000000" 
+          stroke-width="1" 
+          d="M12,2C8.14,2 5,5.14 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.86 -3.14,-7 -7,-7zM12,4c1.1,0 2,0.9 2,2c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2c0,-1.1 0.9,-2 2,-2z"
+        />
+      </svg>
+    `;
+    
+    const div = document.createElement('div');
+    div.innerHTML = svg;
+    div.style.cursor = 'pointer';
+    div.style.filter = isSelected ? 'drop-shadow(0px 3px 3px rgba(0, 0, 0, 0.4))' : 'none';
+    div.style.zIndex = isSelected ? '1000' : '1';
+    div.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)';
+    div.style.transition = 'all 0.2s ease';
+    
+    return div;
   }, []);
+  
+  // Helper function to create Near Me button (wrapped in useCallback)
+  const createNearMeButton = useCallback(() => {
+    const controlButton = document.createElement('button');
+    controlButton.style.backgroundColor = darkMode ? '#333' : '#fff';
+    controlButton.style.border = darkMode ? '2px solid #555' : '2px solid #fff';
+    controlButton.style.borderRadius = '3px';
+    controlButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+    controlButton.style.cursor = 'pointer';
+    controlButton.style.marginTop = '10px';
+    controlButton.style.marginRight = '10px';
+    controlButton.style.padding = '8px 16px';
+    controlButton.style.textAlign = 'center';
+    controlButton.style.color = darkMode ? '#f0f0f0' : '#750787';
+    controlButton.style.fontFamily = 'Roboto,Arial,sans-serif';
+    controlButton.style.fontSize = '14px';
+    controlButton.style.fontWeight = 'bold';
+    controlButton.textContent = '📍 Near Me';
+    controlButton.title = 'Click to show venues near your current location';
+    controlButton.type = 'button';
+    
+    // Change appearance on hover
+    controlButton.addEventListener('mouseover', () => {
+      controlButton.style.backgroundColor = darkMode ? '#444' : '#f8f8f8';
+      controlButton.style.color = darkMode ? '#fff' : '#8a2be2';
+    });
+    
+    controlButton.addEventListener('mouseout', () => {
+      controlButton.style.backgroundColor = darkMode ? '#333' : '#fff';
+      controlButton.style.color = darkMode ? '#f0f0f0' : '#750787';
+    });
+    
+    return controlButton;
+  }, [darkMode]);
   
   // Handle "Near Me" functionality
   const handleNearMe = useCallback(() => {
-    if (navigator.geolocation && googleMapRef.current) {
+    if (navigator.geolocation && googleMapRef.current && window.google && window.google.maps && window.google.maps.marker) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const userPos = {
@@ -149,20 +126,16 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
             googleMapRef.current.setCenter(userPos);
             googleMapRef.current.setZoom(14);
             
-            // Add user location marker
-            new window.google.maps.Marker({
-              position: userPos,
+            // Add user location marker - using AdvancedMarkerElement
+            const { AdvancedMarkerElement } = window.google.maps.marker;
+            
+            // Add user location marker with circle
+            new AdvancedMarkerElement({
               map: googleMapRef.current,
-              icon: {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: '#4285F4',
-                fillOpacity: 1,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 2,
-                scale: 8
-              },
+              position: userPos,
               title: 'Your Location',
-              zIndex: 1000
+              zIndex: 1000,
+              content: createCircleMarker('#4285F4')
             });
           }
         },
@@ -173,7 +146,19 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
         { enableHighAccuracy: true } // Added high accuracy option
       );
     } else {
-      alert("Geolocation is not supported by your browser.");
+      alert("Geolocation is not supported by your browser or Maps API not fully loaded.");
+    }
+  }, [createCircleMarker, setUserLocation]);
+  
+  // Helper to close active info window
+  const closeActiveInfoWindow = useCallback(() => {
+    if (activeInfoWindowRef.current) {
+      try {
+        activeInfoWindowRef.current.setMap(null);
+        activeInfoWindowRef.current = null;
+      } catch (error) {
+        console.error("Error closing info window:", error);
+      }
     }
   }, []);
   
@@ -182,18 +167,19 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     if (mapInitializedRef.current || !mapContainerRef.current) return;
     
     try {
+      // Note: We've removed custom styles since they conflict with mapId
       const mapOptions = {
+        mapId: '5f55aaf697b4ea71', // Your custom Map ID
         center: { lat: 33.7490, lng: -84.3880 }, // Atlanta coordinates
         zoom: 12,
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
         streetViewControl: false,
-        fullscreenControl: false, // Removed fullscreen option
-        styles: darkMode ? darkMapStyle : lightMapStyle, // Apply theme based on mode
-        gestureHandling: 'cooperative', // Improves mobile scrolling experience
-        // Disable animations
-        animatedZoom: false
+        fullscreenControl: false,
+        gestureHandling: 'greedy', // Changed to 'greedy' to make map less interactive
+        animatedZoom: false, // Disable animations
+        clickableIcons: false // Make POIs not clickable
       };
       
       const map = new window.google.maps.Map(mapContainerRef.current, mapOptions);
@@ -208,7 +194,6 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       
       googleMapRef.current = map;
       geocoderRef.current = geocoder;
-      setMapTheme(darkMode ? 'dark' : 'light');
       mapInitializedRef.current = true;
       
       setMapRef(map);
@@ -224,25 +209,27 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       // Add global map click handler to close any open info windows
       map.addListener('click', () => {
         closeActiveInfoWindow();
+        // Also clear selected venue when clicking on the map
+        if (selectedVenue) {
+          onMarkerClick(null);
+        }
+      });
+      
+      // Optional: Monitor map capabilities for debugging
+      map.addListener('mapcapabilities_changed', () => {
+        const capabilities = map.getMapCapabilities();
+        console.log("Map capabilities:", capabilities);
+        
+        if (!capabilities.isAdvancedMarkersAvailable) {
+          console.warn("Advanced markers are not available. Using Map ID:", mapOptions.mapId);
+        }
       });
       
       console.log("Map initialized successfully");
     } catch (error) {
       console.error("Error initializing map:", error);
     }
-  }, [darkMode, handleNearMe, lightMapStyle, darkMapStyle, setMapRef]);
-  
-  // Helper to close active info window
-  const closeActiveInfoWindow = () => {
-    if (activeInfoWindowRef.current) {
-      try {
-        activeInfoWindowRef.current.setMap(null);
-        activeInfoWindowRef.current = null;
-      } catch (error) {
-        console.error("Error closing info window:", error);
-      }
-    }
-  };
+  }, [handleNearMe, setMapRef, selectedVenue, onMarkerClick, createNearMeButton, closeActiveInfoWindow]);
   
   // Create custom info window style (using custom overlay)
   const createCustomInfoWindow = useCallback((content, marker) => {
@@ -309,6 +296,8 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
         e.stopPropagation();
         this.setMap(null);
         activeInfoWindowRef.current = null;
+        // Also clear selected venue
+        onMarkerClick(null);
       });
       div.appendChild(closeButton);
       
@@ -325,9 +314,6 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       
       // Position the div to the side of the marker (not directly above it)
       const div = this.div;
-      
-      // Calculate the marker's height to avoid overlap
-      const markerHeight = 40; // Approximate height of marker
       
       // Position the info window to the right of the marker
       div.style.left = (position.x + 20) + 'px'; // Offset to right
@@ -372,47 +358,13 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     };
     
     // Create and return a new instance
-    const infoWindow = new CustomInfoWindow(content, marker.getPosition());
+    const infoWindow = new CustomInfoWindow(content, marker.position);
     
     // Store reference to active info window
     activeInfoWindowRef.current = infoWindow;
     
     return infoWindow;
-  }, [darkMode]);
-  
-  // Helper function to create Near Me button
-  const createNearMeButton = () => {
-    const controlButton = document.createElement('button');
-    controlButton.style.backgroundColor = darkMode ? '#333' : '#fff';
-    controlButton.style.border = darkMode ? '2px solid #555' : '2px solid #fff';
-    controlButton.style.borderRadius = '3px';
-    controlButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
-    controlButton.style.cursor = 'pointer';
-    controlButton.style.marginTop = '10px';
-    controlButton.style.marginRight = '10px';
-    controlButton.style.padding = '8px 16px';
-    controlButton.style.textAlign = 'center';
-    controlButton.style.color = darkMode ? '#f0f0f0' : '#750787';
-    controlButton.style.fontFamily = 'Roboto,Arial,sans-serif';
-    controlButton.style.fontSize = '14px';
-    controlButton.style.fontWeight = 'bold';
-    controlButton.textContent = '📍 Near Me';
-    controlButton.title = 'Click to show venues near your current location';
-    controlButton.type = 'button';
-    
-    // Change appearance on hover
-    controlButton.addEventListener('mouseover', () => {
-      controlButton.style.backgroundColor = darkMode ? '#444' : '#f8f8f8';
-      controlButton.style.color = darkMode ? '#fff' : '#8a2be2';
-    });
-    
-    controlButton.addEventListener('mouseout', () => {
-      controlButton.style.backgroundColor = darkMode ? '#333' : '#fff';
-      controlButton.style.color = darkMode ? '#f0f0f0' : '#750787';
-    });
-    
-    return controlButton;
-  };
+  }, [darkMode, onMarkerClick, closeActiveInfoWindow]);
   
   // Helper function to extract address from Google Maps URL
   const getAddressFromMapsURL = useCallback((url) => {
@@ -427,25 +379,10 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     }
   }, []);
 
-  // Load Google Maps API (only once)
+  // Load Google Maps API (only once) - updated to use modern approach
   useEffect(() => {
     // If map is already initialized, don't reload
     if (mapInitializedRef.current) return;
-    
-    // Function to handle when Google Maps is ready
-    const handleGoogleMapsReady = () => {
-      // Initialize map
-      if (window.google && window.google.maps) {
-        initializeMap();
-      }
-    };
-    
-    // If Google Maps is already loaded, use it
-    if (window.google && window.google.maps) {
-      console.log("Google Maps API already loaded");
-      handleGoogleMapsReady();
-      return;
-    }
     
     // If we're already loading the script, just wait
     if (googleMapsLoading) {
@@ -453,80 +390,88 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       return;
     }
     
-    // If not loaded yet, set up a clean global callback
-    if (!googleMapsLoaded) {
-      console.log("Loading Google Maps API");
+    // Modern approach to loading Google Maps
+    async function loadMap() {
       googleMapsLoading = true;
       
-      // Set up a unique callback name to avoid conflicts
-      const callbackName = 'googleMapsInitCallback_' + Math.random().toString(36).substr(2, 9);
-      
-      // Create the callback function
-      window[callbackName] = () => {
-        console.log("Google Maps API loaded successfully");
+      try {
+        // Load the Maps JavaScript API using importLibrary
+        if (!window.google) {
+          // Create script element if Google is not yet loaded
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&callback=initCallback`;
+          
+          // Set up callback
+          window.initCallback = async () => {
+            console.log("Google Maps API loaded successfully");
+            
+            // Now that the API is loaded, initialize the map
+            if (window.google && window.google.maps) {
+              await window.google.maps.importLibrary("marker");
+              await window.google.maps.importLibrary("maps");
+              initializeMap();
+            }
+          };
+          
+          document.head.appendChild(script);
+        } else {
+          // Google already exists, just initialize map
+          await window.google.maps.importLibrary("marker");
+          await window.google.maps.importLibrary("maps");
+          initializeMap();
+        }
+        
         googleMapsLoaded = true;
         googleMapsLoading = false;
-        handleGoogleMapsReady();
-        // Clean up the callback
-        delete window[callbackName];
-      };
-      
-      // Create and append the script
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=${callbackName}&loading=async`;
-      script.async = true;
-      script.defer = true;
-      
-      // Handle loading errors
-      script.onerror = () => {
-        console.error("Error loading Google Maps API");
+      } catch (error) {
+        console.error("Error loading Google Maps API:", error);
         googleMapsLoading = false;
-      };
-      
-      document.head.appendChild(script);
+      }
+    }
+    
+    // Check if the Google object already exists
+    if (window.google && window.google.maps) {
+      console.log("Google Maps API already loaded");
+      loadMap();
+      return;
+    }
+    
+    // If not loaded yet, load the Google Maps
+    if (!googleMapsLoaded) {
+      console.log("Loading Google Maps API");
+      loadMap();
     }
   }, [apiKey, initializeMap]);
-
-  // Update map theme when dark mode changes
-  useEffect(() => {
-    if (!mapInitializedRef.current || !googleMapRef.current) return;
-    
-    if (mapTheme !== (darkMode ? 'dark' : 'light')) {
-      console.log(`Updating map theme to ${darkMode ? 'dark' : 'light'}`);
-      googleMapRef.current.setOptions({
-        styles: darkMode ? darkMapStyle : lightMapStyle
-      });
-      setMapTheme(darkMode ? 'dark' : 'light');
-    }
-  }, [darkMode, darkMapStyle, lightMapStyle, mapTheme]);
-  
-  // Create improved pin SVG with consistent black border and drop shadow
-  const createPinSVG = useCallback((color = '#FF0000', isSelected = false) => {
-    return {
-      path: 'M12,2C8.14,2 5,5.14 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.86 -3.14,-7 -7,-7zM12,4c1.1,0 2,0.9 2,2c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2c0,-1.1 0.9,-2 2,-2z',
-      fillColor: color,
-      fillOpacity: isSelected ? 1.0 : 0.9,
-      strokeWeight: 1.5, // Consistent black border
-      strokeColor: '#000000', // Always black border
-      scale: isSelected ? 2.2 : 1.6,
-      anchor: new window.google.maps.Point(12, 22),
-      // Add filter for drop shadow on selected pins
-      labelOrigin: new window.google.maps.Point(12, 9),
-    };
-  }, []);
   
   // Animate pin bounce effect
   const bounceMarker = useCallback((marker) => {
-    if (!marker || !window.google || !window.google.maps) return;
+    if (!marker) return;
     
     try {
-      if (marker.getAnimation() !== window.google.maps.Animation.BOUNCE) {
-        marker.setAnimation(window.google.maps.Animation.BOUNCE);
+      // Create a bouncing animation using CSS
+      const markerElement = marker.content;
+      if (markerElement) {
+        markerElement.style.animation = 'bounce 0.8s ease infinite alternate';
+        
+        // Add keyframes if not already in document
+        if (!document.getElementById('marker-animation-style')) {
+          const style = document.createElement('style');
+          style.id = 'marker-animation-style';
+          style.innerHTML = `
+            @keyframes bounce {
+              0% { transform: translateY(0); }
+              100% { transform: translateY(-10px); }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        // Stop animation after a few bounces
         setTimeout(() => {
-          if (marker) {
-            marker.setAnimation(null);
+          if (markerElement) {
+            markerElement.style.animation = 'none';
           }
-        }, 2100); // Bounce for 2.1 seconds (3 bounces)
+        }, 2100);
       }
     } catch (error) {
       console.error("Error bouncing marker:", error);
@@ -538,7 +483,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     if (!marker || !map) return;
     
     try {
-      const position = marker.getPosition();
+      const position = marker.position;
       if (!position) return;
       
       // Set directly without animation
@@ -564,14 +509,11 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       
       // Add marker positions to bounds
       Object.values(markers).forEach(marker => {
-        if (marker && marker._neighborhood === neighborhood && marker.getPosition) {
-          const position = marker.getPosition();
-          if (position) {
-            bounds.extend(position);
-            hasMarkers = true;
-            // Bounce all markers in this neighborhood
-            bounceMarker(marker);
-          }
+        if (marker && marker._neighborhood === neighborhood && marker.position) {
+          bounds.extend(marker.position);
+          hasMarkers = true;
+          // Bounce all markers in this neighborhood
+          bounceMarker(marker);
         }
       });
       
@@ -590,7 +532,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     } catch (error) {
       console.error("Error zooming to neighborhood:", error);
     }
-  }, [bounceMarker]);
+  }, [bounceMarker, closeActiveInfoWindow]);
   
   // Show info window for selected venue
   useEffect(() => {
@@ -634,18 +576,36 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     try {
       console.log("Creating/updating markers");
       
+      // Process all venues
       venues.forEach(venue => {
         // Skip if venue doesn't have required data
         if (!venue || !venue.id) return;
         
+        // Check if this venue is in the filtered venues
+        const isVisible = filteredVenues.some(v => v.id === venue.id);
+        
+        // Check if venue is selected
+        const isSelected = selectedVenue && selectedVenue.id === venue.id;
+        
         // Check if marker already exists
         if (markersRef.current[venue.id]) {
-          // Update icon based on selection state
-          const isSelected = selectedVenue && selectedVenue.id === venue.id;
-          
           try {
-            markersRef.current[venue.id].setIcon(createPinSVG(getPinColor(venue.id), isSelected));
-            markersRef.current[venue.id].setZIndex(isSelected ? 999 : 1);
+            // Update marker visibility
+            markersRef.current[venue.id].map = isVisible ? googleMapRef.current : null;
+            
+            // Update marker appearance
+            if (markersRef.current[venue.id].content) {
+              // Create a new pin element
+              const pinElement = createPinElement(getPinColor(venue.id), isSelected);
+              
+              // Replace the existing content with the new element
+              const oldContent = markersRef.current[venue.id].content;
+              if (oldContent && oldContent.parentNode) {
+                oldContent.parentNode.replaceChild(pinElement, oldContent);
+              } else {
+                markersRef.current[venue.id].content = pinElement;
+              }
+            }
             
             // Store neighborhood for reference
             markersRef.current[venue.id]._neighborhood = venue.Neighborhood || 'Uncategorized';
@@ -664,27 +624,27 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
             try {
               geocoderRef.current.geocode({ address }, (results, status) => {
                 if (status === 'OK' && results && results[0] && googleMapRef.current) {
-                  const isSelected = selectedVenue && selectedVenue.id === venue.id;
-                  
                   try {
-                    // Create marker with traditional API
-                    const marker = new window.google.maps.Marker({
+                    // Create pin element directly (not a Promise)
+                    const pinElement = createPinElement(getPinColor(venue.id), isSelected);
+                    
+                    // Create marker using AdvancedMarkerElement
+                    const marker = new window.google.maps.marker.AdvancedMarkerElement({
                       position: results[0].geometry.location,
-                      map: googleMapRef.current,
+                      map: isVisible ? googleMapRef.current : null,
                       title: venue.RestaurantName || 'Venue',
-                      icon: createPinSVG(getPinColor(venue.id), isSelected),
-                      animation: null, // No animation
-                      zIndex: isSelected ? 999 : 1
+                      content: pinElement
                     });
                     
                     // Store neighborhood for reference
                     marker._neighborhood = venue.Neighborhood || 'Uncategorized';
                     
-                    // Add click handler
-                    marker.addListener('click', () => {
+                    // Add click event listener
+                    marker.addEventListener('click', () => {
                       onMarkerClick(venue.id);
                     });
                     
+                    // Store marker reference
                     markersRef.current[venue.id] = marker;
                     
                     // Update markers in state
@@ -737,12 +697,25 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     getAddressFromMapsURL, 
     onMarkerClick, 
     setMarkers, 
-    createPinSVG, 
+    createPinElement, 
     getPinColor, 
     centerMapOnMarker, 
     darkMode, 
-    createCustomInfoWindow
+    createCustomInfoWindow,
+    filteredVenues
   ]);
+  
+  // Update marker visibility when filteredVenues changes
+  useEffect(() => {
+    if (!mapInitializedRef.current || !googleMapRef.current) return;
+    
+    Object.entries(markersRef.current).forEach(([venueId, marker]) => {
+      if (marker) {
+        const isVisible = filteredVenues.some(v => v.id.toString() === venueId);
+        marker.map = isVisible ? googleMapRef.current : null;
+      }
+    });
+  }, [filteredVenues]);
   
   // Effect to handle neighborhood zoom when selected neighborhood changes
   useEffect(() => {

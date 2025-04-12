@@ -94,7 +94,7 @@ export default function App() {
     
     // If search term is empty, just apply day/happening now filters
     if (!term.trim()) {
-      applyFilters(allVenues, activeDay, happeningNow, selectedNeighborhood);
+      applyFilters(allVenues, activeDay, happeningNow);
       return;
     }
     
@@ -108,12 +108,12 @@ export default function App() {
       );
     });
     
-    // Apply other filters to search results
-    applyFilters(searchResults, activeDay, happeningNow, selectedNeighborhood);
-  }, [allVenues, activeDay, happeningNow, selectedNeighborhood]);
+    // Apply other filters to search results (but not neighborhood filter)
+    applyFilters(searchResults, activeDay, happeningNow);
+  }, [allVenues, activeDay, happeningNow]);
   
-  // Filter application helper function
-  const applyFilters = useCallback((venueList, day, isHappeningNow, neighborhood) => {
+  // Filter application helper function - modified to NOT filter by neighborhood
+  const applyFilters = useCallback((venueList, day, isHappeningNow) => {
     let filtered = [...venueList];
     
     // Apply day filter
@@ -136,17 +136,10 @@ export default function App() {
       }
     }
     
-    // Apply neighborhood filter
-    if (neighborhood) {
-      filtered = filtered.filter(venue => 
-        venue.Neighborhood === neighborhood || 
-        (!venue.Neighborhood && neighborhood === 'Uncategorized')
-      );
-    }
-    
+    // Set filtered venues without applying neighborhood filter
     setFilteredVenues(filtered);
     
-    // Update marker visibility if map is available
+    // Update marker visibility based on filtered venues
     updateMarkerVisibility(filtered);
   }, []);
   
@@ -157,7 +150,7 @@ export default function App() {
         const marker = markers[venue.id];
         if (marker) {
           const isVisible = filteredList.some(v => v.id === venue.id);
-          marker.setMap(isVisible ? mapRef : null);
+          marker.map = isVisible ? mapRef : null;
         }
       });
     }
@@ -170,9 +163,9 @@ export default function App() {
       handleSearch(searchTerm);
     } else {
       // Otherwise just apply regular filters
-      applyFilters(allVenues, activeDay, happeningNow, selectedNeighborhood);
+      applyFilters(allVenues, activeDay, happeningNow);
     }
-  }, [activeDay, happeningNow, allVenues, searchTerm, selectedNeighborhood, handleSearch, applyFilters]);
+  }, [activeDay, happeningNow, allVenues, searchTerm, handleSearch, applyFilters]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -185,6 +178,11 @@ export default function App() {
   
   // Handle venue selection
   const handleVenueSelect = (venueId) => {
+    if (venueId === null) {
+      setSelectedVenue(null);
+      return;
+    }
+    
     const selected = venues.find(v => v.id === venueId);
     setSelectedVenue(selected);
     
@@ -194,7 +192,7 @@ export default function App() {
     }
   };
   
-  // Handle neighborhood selection
+  // Handle neighborhood selection - MODIFIED: For highlighting only, not filtering
   const handleNeighborhoodSelect = (neighborhood) => {
     setSelectedNeighborhood(neighborhood);
     
@@ -275,6 +273,7 @@ export default function App() {
       <main id="main-content">
         <Sidebar 
           venues={filteredVenues} 
+          allVenues={allVenues}
           selectedVenue={selectedVenue}
           onVenueSelect={handleVenueSelect}
           darkMode={darkMode}
@@ -284,6 +283,7 @@ export default function App() {
         
         <MapView 
           venues={venues}
+          filteredVenues={filteredVenues}
           selectedVenue={selectedVenue}
           setMapRef={setMapRef}
           setMarkers={setMarkers}
