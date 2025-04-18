@@ -9,14 +9,14 @@ const Header = ({
   darkMode, 
   onDarkModeToggle
 }) => {
-  // Day buttons configuration
+  // Day buttons configuration with full labels for better clarity
   const dayButtons = [
-    { id: 'all', label: 'All Days' },
-    { id: 'mon', label: 'M' },
-    { id: 'tue', label: 'T' },
-    { id: 'wed', label: 'W' },
-    { id: 'thu', label: 'T' },
-    { id: 'fri', label: 'F' },
+    { id: 'all', label: 'All Days', longLabel: 'All Days' },
+    { id: 'mon', label: 'M', longLabel: 'Monday' },
+    { id: 'tue', label: 'T', longLabel: 'Tuesday' },
+    { id: 'wed', label: 'W', longLabel: 'Wednesday' },
+    { id: 'thu', label: 'T', longLabel: 'Thursday' },
+    { id: 'fri', label: 'F', longLabel: 'Friday' },
   ];
   
   return (
@@ -33,6 +33,8 @@ const Header = ({
               data-day={day.id}
               className={activeDay === day.id ? 'active' : ''}
               onClick={() => onDayChange(day.id)}
+              title={day.longLabel}
+              aria-pressed={activeDay === day.id}
             >
               {day.label}
             </button>
@@ -41,12 +43,13 @@ const Header = ({
         
         <div className="happening-now">
           <span>Happening Now:</span>
-          <label className="switch">
+          <label className="switch" title="Show only venues with happy hours happening now">
             <input 
               type="checkbox" 
               id="happening-now-toggle" 
               checked={happeningNow}
               onChange={onHappeningNowToggle}
+              aria-label="Show only venues with happy hours happening now"
             />
             <span className="slider"></span>
           </label>

@@ -19,6 +19,7 @@ export default function App() {
   const [markers, setMarkers] = useState({});
   const [darkMode, setDarkMode] = useState(false);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Check for system preferences and saved dark mode preference on initial load
   useEffect(() => {
@@ -54,12 +55,17 @@ export default function App() {
   
   // Load CSV data on component mount
   useEffect(() => {
+    setIsLoading(true);
+    
+    // Use the Google Sheets published CSV URL
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRMxih2SsybskeLkCCx-HNENiyM3fY3QaLj7Z_uw-Qw-kp7a91cShfW45Y9IZTd6bKYv-1-MTOVoWFH/pub?gid=0&single=true&output=csv';
     
     Papa.parse(csvUrl, {
       download: true,
       header: true,
       complete: (results) => {
+        console.log("CSV Data loaded:", results.data[0]); // Log first venue to help debug
+        
         // Sort by neighborhood
         const sortedData = results.data
           .filter(item => item.RestaurantName && item.Deal) // Filter out empty rows
@@ -75,9 +81,11 @@ export default function App() {
         setVenues(dataWithIds);
         setAllVenues(dataWithIds);
         setFilteredVenues(dataWithIds);
+        setIsLoading(false);
       },
       error: (err) => {
         console.error('Error parsing CSV:', err);
+        setIsLoading(false);
       }
     });
   }, []);
@@ -95,17 +103,22 @@ export default function App() {
     }
   }, [mapRef, markers, allVenues]);
   
-  // Simplified filter application function
+  // Improved filter application function with better logging
   const applyFilters = useCallback((day, isHappeningNow) => {
     let filtered = [...allVenues];
     
     // Apply day filter
     if (day !== 'all') {
+      const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
+      const column = dayMapping[day];
+      
       filtered = filtered.filter(venue => {
-        const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
-        const column = dayMapping[day];
-        return venue[column] && venue[column].toLowerCase() === 'yes';
+        // Normalize value check to handle case sensitivity and whitespace
+        const value = venue[column]?.trim()?.toLowerCase() || '';
+        return value === 'yes';
       });
+      
+      console.log(`Applied ${day} filter, remaining venues:`, filtered.length);
     }
     
     // Apply happening now filter
@@ -115,7 +128,12 @@ export default function App() {
       const todayColumn = dayMapping[today];
       
       if (todayColumn) {
-        filtered = filtered.filter(venue => venue[todayColumn] && venue[todayColumn].toLowerCase() === 'yes');
+        filtered = filtered.filter(venue => {
+          const value = venue[todayColumn]?.trim()?.toLowerCase() || '';
+          return value === 'yes';
+        });
+        
+        console.log(`Applied happening now filter for ${todayColumn}, remaining venues:`, filtered.length);
       }
     }
     
@@ -128,8 +146,10 @@ export default function App() {
   
   // Effect to apply filters when filter state changes
   useEffect(() => {
-    applyFilters(activeDay, happeningNow);
-  }, [activeDay, happeningNow, applyFilters]);
+    if (!isLoading) {
+      applyFilters(activeDay, happeningNow);
+    }
+  }, [activeDay, happeningNow, applyFilters, isLoading]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -173,27 +193,35 @@ export default function App() {
     setSelectedNeighborhood(neighborhood);
   };
   
-  // Handle day filter change - simplified
+  // Improved handle day filter change with better logic
   const handleDayChange = (day) => {
-    // If clicking the active day, deselect it
+    // If clicking the active day, deselect it (unless it's 'all')
     if (day === activeDay && day !== 'all') {
       setActiveDay('all');
+      
+      // If happening now is active, keep it active (it will just filter by today)
+      // Happening now shouldn't be toggled off when clearing day filter
     } else {
       setActiveDay(day);
       
-      // If selecting current day, also toggle happening now
+      // If selecting current day and happening now is off, also toggle happening now on
       const today = new Date().getDay();
       const dayMapping = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+      const todayString = dayMapping[today];
       
-      if (day === dayMapping[today]) {
+      if (day === todayString && !happeningNow) {
         setHappeningNow(true);
-      } else if (happeningNow) {
+      } else if (day !== 'all' && day !== todayString && happeningNow) {
+        // If selecting a different day than today, turn off happening now
         setHappeningNow(false);
       }
     }
+    
+    // Log filter state for debugging
+    console.log(`Day changed to: ${day}, happening now: ${happeningNow}`);
   };
   
-  // Handle happening now toggle - simplified
+  // Improved handle happening now toggle
   const handleHappeningNowToggle = () => {
     const newState = !happeningNow;
     setHappeningNow(newState);
@@ -202,11 +230,15 @@ export default function App() {
       // If turning on happening now, also set active day to today
       const today = new Date().getDay();
       const dayMapping = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+      const todayString = dayMapping[today];
       
-      if (dayMapping[today]) {
-        setActiveDay(dayMapping[today]);
+      if (todayString && activeDay !== todayString) {
+        setActiveDay(todayString);
       }
     }
+    
+    // Log happening now toggle for debugging
+    console.log(`Happening now toggled to: ${newState}, active day: ${activeDay}`);
   };
   
   return (
@@ -229,6 +261,7 @@ export default function App() {
           darkMode={darkMode}
           onNeighborhoodSelect={handleNeighborhoodSelect}
           selectedNeighborhood={selectedNeighborhood}
+          isLoading={isLoading}
         />
         
         <MapView 
@@ -240,6 +273,7 @@ export default function App() {
           onMarkerClick={handleVenueSelect}
           darkMode={darkMode}
           selectedNeighborhood={selectedNeighborhood}
+          isLoading={isLoading}
         />
       </main>
       

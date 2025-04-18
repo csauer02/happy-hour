@@ -9,7 +9,8 @@ const Sidebar = ({
   onVenueSelect, 
   darkMode, 
   onNeighborhoodSelect, 
-  selectedNeighborhood 
+  selectedNeighborhood,
+  isLoading
 }) => {
   const [expandedNeighborhood, setExpandedNeighborhood] = useState(null);
   const sidebarRef = useRef(null);
@@ -49,53 +50,18 @@ const Sidebar = ({
     }
   }, [selectedNeighborhood, expandedNeighborhood]);
   
-  // Calculate proper scroll position accounting for sticky headers
-  const scrollToElement = (element, headerHeight = 45) => {
-    if (!element || !sidebarRef.current) return;
-    
-    const sidebarRect = sidebarRef.current.getBoundingClientRect();
-    const elementRect = element.getBoundingClientRect();
-    
-    const relativeTop = elementRect.top - sidebarRect.top;
-    const elementHeight = elementRect.height;
-    
-    // If the element is already fully visible within the viewport, don't scroll
-    if (
-      relativeTop >= headerHeight && 
-      relativeTop + elementHeight <= sidebarRect.height
-    ) {
-      return;
-    }
-    
-    // Calculate the offset accounting for sticky header
-    let scrollOffset;
-    
-    if (relativeTop < headerHeight) {
-      // If element is above the viewport, scroll it to just below the header
-      scrollOffset = sidebarRef.current.scrollTop + (relativeTop - headerHeight - 5);
-    } else if (relativeTop + elementHeight > sidebarRect.height) {
-      // If element is below the viewport, scroll it into view
-      scrollOffset = sidebarRef.current.scrollTop + ((relativeTop + elementHeight) - sidebarRect.height + 10);
-    } else {
-      return; // Element is already fully visible
-    }
-    
-    // Perform the scroll with smooth behavior
-    sidebarRef.current.scrollTo({
-      top: scrollOffset,
-      behavior: 'smooth'
-    });
-  };
-  
   // Scroll to neighborhood when it expands
   useEffect(() => {
     if (expandedNeighborhood && neighborhoodRefs.current[expandedNeighborhood]) {
       const headerElement = neighborhoodRefs.current[expandedNeighborhood];
       
       if (headerElement) {
-        // Use custom scroll function
+        // Scroll the neighborhood header to the top of the sidebar with a small offset
         setTimeout(() => {
-          scrollToElement(headerElement, 0); // No offset for neighborhood headers
+          headerElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start'
+          });
         }, 100);
       }
     }
@@ -112,12 +78,12 @@ const Sidebar = ({
         setTimeout(() => {
           const cardElement = cardRefs.current[selectedVenue.id];
           if (cardElement) {
-            scrollToElement(cardElement);
+            cardElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'nearest' 
+            });
             
             // Add selected class for styling
-            Object.values(cardRefs.current).forEach(ref => {
-              if (ref) ref.classList.remove('selected-venue-card');
-            });
             cardElement.classList.add('selected-venue-card');
           }
         }, 300);
@@ -125,67 +91,44 @@ const Sidebar = ({
         // Neighborhood already expanded, directly scroll to card
         const cardElement = cardRefs.current[selectedVenue.id];
         if (cardElement) {
-          scrollToElement(cardElement);
+          cardElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest' 
+          });
           
           // Add selected class for styling
-          Object.values(cardRefs.current).forEach(ref => {
-            if (ref) ref.classList.remove('selected-venue-card');
-          });
           cardElement.classList.add('selected-venue-card');
         }
       }
     }
   }, [selectedVenue, expandedNeighborhood]);
   
+  // Clear selection classes when selected venue changes
+  useEffect(() => {
+    // Remove selected class from all cards
+    Object.values(cardRefs.current).forEach(cardRef => {
+      if (cardRef) {
+        cardRef.classList.remove('selected-venue-card');
+      }
+    });
+    
+    // Add selected class to current selection if it exists
+    if (selectedVenue && cardRefs.current[selectedVenue.id]) {
+      cardRefs.current[selectedVenue.id].classList.add('selected-venue-card');
+    }
+  }, [selectedVenue]);
+  
   const neighborhoodGroups = getNeighborhoodGroups();
   
   return (
     <section id="sidebar" className={darkMode ? 'dark-mode' : ''} ref={sidebarRef}>
       <div id="venue-container">
-        {Object.keys(neighborhoodGroups).sort().map(neighborhood => {
-          const isSelected = selectedNeighborhood === neighborhood;
-          const isExpanded = expandedNeighborhood === neighborhood;
-          const venuesInNeighborhood = neighborhoodGroups[neighborhood];
-          
-          return (
-            <div 
-              className={`neighborhood-section ${isSelected ? 'highlighted' : ''}`} 
-              key={neighborhood}
-              data-neighborhood={neighborhood}
-            >
-              <div 
-                className={`neighborhood-header ${isSelected ? 'active' : ''}`}
-                onClick={() => handleNeighborhoodClick(neighborhood)}
-                ref={el => neighborhoodRefs.current[neighborhood] = el}
-              >
-                <span>{neighborhood}</span>
-                <span className="venue-count">{venuesInNeighborhood.length}</span>
-                <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
-              </div>
-              
-              <div className={`neighborhood-content ${isExpanded ? 'expanded' : ''}`}>
-                {isExpanded && (
-                  <div className="venue-list">
-                    {venuesInNeighborhood.map(venue => (
-                      <RestaurantCard 
-                        key={venue.id}
-                        venue={venue}
-                        isSelected={selectedVenue && selectedVenue.id === venue.id}
-                        onSelect={() => onVenueSelect(venue.id)}
-                        darkMode={darkMode}
-                        data-venue-id={venue.id}
-                        id={`venue-card-${venue.id}`}
-                        ref={el => cardRefs.current[venue.id] = el}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        
-        {venues.length === 0 && (
+        {isLoading ? (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading venues...</p>
+          </div>
+        ) : venues.length === 0 ? (
           <div className="no-results">
             <p>No venues match your current filters.</p>
             <button 
@@ -195,6 +138,55 @@ const Sidebar = ({
               Reset Filters
             </button>
           </div>
+        ) : (
+          Object.keys(neighborhoodGroups).sort().map(neighborhood => {
+            const isSelected = selectedNeighborhood === neighborhood;
+            const isExpanded = expandedNeighborhood === neighborhood;
+            const venuesInNeighborhood = neighborhoodGroups[neighborhood];
+            const filteredVenuesInNeighborhood = venuesInNeighborhood.filter(v => 
+              venues.some(fv => fv.id === v.id)
+            );
+            
+            // Skip neighborhoods with no matching venues
+            if (filteredVenuesInNeighborhood.length === 0) return null;
+            
+            return (
+              <div 
+                className={`neighborhood-section ${isSelected ? 'highlighted' : ''}`} 
+                key={neighborhood}
+                data-neighborhood={neighborhood}
+              >
+                <div 
+                  className={`neighborhood-header ${isSelected ? 'active' : ''}`}
+                  onClick={() => handleNeighborhoodClick(neighborhood)}
+                  ref={el => neighborhoodRefs.current[neighborhood] = el}
+                >
+                  <span>{neighborhood}</span>
+                  <span className="venue-count">{filteredVenuesInNeighborhood.length}</span>
+                  <span className="expand-icon">{isExpanded ? '-' : '+'}</span>
+                </div>
+                
+                <div className={`neighborhood-content ${isExpanded ? 'expanded' : ''}`}>
+                  {isExpanded && (
+                    <div className="venue-list">
+                      {filteredVenuesInNeighborhood.map(venue => (
+                        <RestaurantCard 
+                          key={venue.id}
+                          venue={venue}
+                          isSelected={selectedVenue && selectedVenue.id === venue.id}
+                          onSelect={() => onVenueSelect(venue.id)}
+                          darkMode={darkMode}
+                          data-venue-id={venue.id}
+                          id={`venue-card-${venue.id}`}
+                          ref={el => cardRefs.current[venue.id] = el}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </section>

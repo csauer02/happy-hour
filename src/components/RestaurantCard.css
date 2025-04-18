@@ -129,14 +129,30 @@
   line-height: 1.4;
 }
 
+/* Simplified favicon container - white background in both modes */
 .restaurant-right {
   width: 48px;
   height: 48px;
   margin-left: 0.8rem;
   overflow: hidden;
   border-radius: 8px;
-  box-shadow: 0 2px 4px var(--card-shadow);
-  border: 2px solid transparent;
+  /* White background in both light and dark modes */
+  background-color: #ffffff;
+  /* Enhanced shadow for better definition in dark mode */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  /* Border that works in both modes */
+  border: 1px solid #d0d0d0;
+  /* Center the favicon */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px; /* Minimal padding */
+}
+
+/* Adjust dark mode shadow only */
+.restaurant-card.dark-mode .restaurant-right {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border-color: #888;
 }
 
 .restaurant-card:hover .restaurant-right {
@@ -148,8 +164,19 @@
   border-color: var(--primary-color);
 }
 
+/* Favicon image fills more of the container */
 .restaurant-right img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  width: 90%;
+  height: 90%;
+  object-fit: contain;
+  /* Ensure we don't distort the favicon but allow it to fill the space */
+  max-width: 44px;
+  max-height: 44px;
+  /* Add subtle shadow to help with visibility against white */
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.15));
+}
+
+/* Slightly enhance contrast in dark mode */
+.restaurant-card.dark-mode .restaurant-right img {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
 }
