@@ -195,12 +195,18 @@ export default function App() {
   
   // Improved handle day filter change with better logic
   const handleDayChange = (day) => {
+    // Turn off "Happening Now" when "All Days" is selected
+    if (day === 'all' && happeningNow) {
+      setHappeningNow(false);
+    }
+    
     // If clicking the active day, deselect it (unless it's 'all')
     if (day === activeDay && day !== 'all') {
       setActiveDay('all');
-      
-      // If happening now is active, keep it active (it will just filter by today)
-      // Happening now shouldn't be toggled off when clearing day filter
+      // Also turn off "Happening Now" when resetting to "All Days"
+      if (happeningNow) {
+        setHappeningNow(false);
+      }
     } else {
       setActiveDay(day);
       
