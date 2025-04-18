@@ -2,15 +2,13 @@
 
 /* Map Container (Desktop/Landscape) */
 #map-container {
-  position: fixed;
-  top: 60px;
-  bottom: 30px;
-  left: 320px;
-  right: 0;
+  position: relative;
+  flex: 1;
+  height: 100%;
   background: #f8f8f8;
   overflow: hidden;
   z-index: 1;
-  transition: all 0.3s ease;
+  transition: var(--dark-transition);
 }
 
 #map-container.dark-mode {
@@ -22,7 +20,7 @@
   width: 100%;
   height: 100%;
   background-color: #f0f0f0; /* Light background color visible while loading */
-  transition: all 0.3s ease;
+  transition: var(--dark-transition);
 }
 
 .dark-mode #map {
@@ -109,10 +107,7 @@
   #map-container {
     position: relative;
     width: 100%;
-    height: 50%; /* 50% for better balance */
-    left: 0;
-    top: 0;
-    bottom: auto;
+    height: 40%; /* Adjusted to 40% to account for the 60% sidebar */
   }
   
   #map {

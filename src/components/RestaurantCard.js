@@ -1,27 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, forwardRef } from 'react';
 import './RestaurantCard.css';
 
-const RestaurantCard = ({ venue, isSelected, onSelect, darkMode, ...props }) => {
-  const cardRef = useRef(null);
-  
-  // When card becomes selected, make sure data attribute is set correctly
-  useEffect(() => {
-    if (cardRef.current) {
-      // Ensure data-venue-id is set on the DOM element
-      cardRef.current.setAttribute('data-venue-id', venue.id);
-      
-      // Add an ID attribute for more reliable selection
-      cardRef.current.id = `venue-card-${venue.id}`;
-      
-      // Add/remove selected class based on selection state
-      if (isSelected) {
-        cardRef.current.classList.add('selected-venue-card');
-      } else {
-        cardRef.current.classList.remove('selected-venue-card');
-      }
-    }
-  }, [isSelected, venue.id]);
-  
+const RestaurantCard = forwardRef(({ venue, isSelected, onSelect, darkMode, ...props }, ref) => {
   // Function to get favicon URL from restaurant website
   const getFaviconUrl = (url) => {
     try {
@@ -36,7 +16,7 @@ const RestaurantCard = ({ venue, isSelected, onSelect, darkMode, ...props }) => 
     <div 
       className={`restaurant-card ${isSelected ? 'selected' : ''} ${darkMode ? 'dark-mode' : ''}`}
       onClick={onSelect}
-      ref={cardRef}
+      ref={ref}
       data-venue-id={venue.id}
       id={`venue-card-${venue.id}`}
       {...props}
@@ -92,6 +72,6 @@ const RestaurantCard = ({ venue, isSelected, onSelect, darkMode, ...props }) => 
       </div>
     </div>
   );
-};
+});
 
 export default RestaurantCard;

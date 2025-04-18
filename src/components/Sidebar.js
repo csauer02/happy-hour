@@ -13,7 +13,8 @@ const Sidebar = ({
 }) => {
   const [expandedNeighborhood, setExpandedNeighborhood] = useState(null);
   const sidebarRef = useRef(null);
-  const previousVenueIdRef = useRef(null);
+  const neighborhoodRefs = useRef({});
+  const cardRefs = useRef({});
   
   // Group venues by neighborhood
   const getNeighborhoodGroups = () => {
@@ -48,73 +49,73 @@ const Sidebar = ({
     }
   }, [selectedNeighborhood, expandedNeighborhood]);
   
+  // Scroll to neighborhood when it expands
+  useEffect(() => {
+    if (expandedNeighborhood && neighborhoodRefs.current[expandedNeighborhood]) {
+      const headerElement = neighborhoodRefs.current[expandedNeighborhood];
+      
+      if (headerElement) {
+        // Scroll the neighborhood header to the top of the sidebar with a small offset
+        setTimeout(() => {
+          headerElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start'
+          });
+        }, 100);
+      }
+    }
+  }, [expandedNeighborhood]);
+  
   // Scroll to selected venue when it changes
   useEffect(() => {
-    if (!selectedVenue) {
-      previousVenueIdRef.current = null;
-      return;
-    }
-    
-    // Skip if it's the same venue as before
-    if (previousVenueIdRef.current === selectedVenue.id) {
-      return;
-    }
-    
-    // Store the current venue id
-    previousVenueIdRef.current = selectedVenue.id;
-    
-    // Make sure neighborhood is expanded
-    if (selectedVenue.Neighborhood !== expandedNeighborhood) {
-      setExpandedNeighborhood(selectedVenue.Neighborhood);
-    }
-    
-    // Function that tries to scroll to the element with retries
-    const scrollToCard = (retryCount = 5) => {
-      if (!sidebarRef.current || retryCount <= 0) return;
-      
-      // Finding the card by multiple selectors for better reliability
-      const selectors = [
-        `[data-venue-id="${selectedVenue.id}"]`,
-        `#venue-card-${selectedVenue.id}`,
-        `.restaurant-card[data-venue-id="${selectedVenue.id}"]`
-      ];
-      
-      let card = null;
-      // Try each selector until we find the card
-      for (const selector of selectors) {
-        card = sidebarRef.current.querySelector(selector);
-        if (card) break;
-      }
-      
-      if (card) {
-        // Direct scroll approach for better reliability
-        const headerOffset = 60; // approximate header height
-        const cardPosition = card.offsetTop;
-        sidebarRef.current.scrollTop = cardPosition - headerOffset;
+    if (selectedVenue && cardRefs.current[selectedVenue.id]) {
+      // Make sure the neighborhood is expanded first
+      if (selectedVenue.Neighborhood !== expandedNeighborhood) {
+        setExpandedNeighborhood(selectedVenue.Neighborhood);
         
-        // Mark the card as selected for CSS targeting
-        const allCards = sidebarRef.current.querySelectorAll('.restaurant-card');
-        allCards.forEach(c => c.classList.remove('selected-venue-card'));
-        card.classList.add('selected-venue-card');
-        
-        // Force the browser to recognize and render the card properly
-        card.style.display = 'flex';
-        // This will force a reflow, ensuring the card is visible
-        // eslint-disable-next-line no-unused-expressions
-        card.offsetHeight;
-      } else if (retryCount > 0) {
-        // Retry with increasing delay
-        setTimeout(() => scrollToCard(retryCount - 1), 150);
+        // Allow time for expansion before scrolling to card
+        setTimeout(() => {
+          const cardElement = cardRefs.current[selectedVenue.id];
+          if (cardElement) {
+            cardElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'nearest' 
+            });
+            
+            // Add selected class for styling
+            cardElement.classList.add('selected-venue-card');
+          }
+        }, 300);
+      } else {
+        // Neighborhood already expanded, directly scroll to card
+        const cardElement = cardRefs.current[selectedVenue.id];
+        if (cardElement) {
+          cardElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest' 
+          });
+          
+          // Add selected class for styling
+          cardElement.classList.add('selected-venue-card');
+        }
       }
-    };
-    
-    // First attempt with a slight delay to allow for DOM updates
-    setTimeout(() => scrollToCard(), 100);
-    
-    // Additional attempts with increased delays for backup
-    setTimeout(() => scrollToCard(3), 300);
-    setTimeout(() => scrollToCard(2), 600);
+    }
   }, [selectedVenue, expandedNeighborhood]);
+  
+  // Clear selection classes when selected venue changes
+  useEffect(() => {
+    // Remove selected class from all cards
+    Object.values(cardRefs.current).forEach(cardRef => {
+      if (cardRef) {
+        cardRef.classList.remove('selected-venue-card');
+      }
+    });
+    
+    // Add selected class to current selection if it exists
+    if (selectedVenue && cardRefs.current[selectedVenue.id]) {
+      cardRefs.current[selectedVenue.id].classList.add('selected-venue-card');
+    }
+  }, [selectedVenue]);
   
   const neighborhoodGroups = getNeighborhoodGroups();
   
@@ -135,6 +136,7 @@ const Sidebar = ({
               <div 
                 className={`neighborhood-header ${isSelected ? 'active' : ''}`}
                 onClick={() => handleNeighborhoodClick(neighborhood)}
+                ref={el => neighborhoodRefs.current[neighborhood] = el}
               >
                 <span>{neighborhood}</span>
                 <span className="venue-count">{venuesInNeighborhood.length}</span>
@@ -153,6 +155,7 @@ const Sidebar = ({
                         darkMode={darkMode}
                         data-venue-id={venue.id}
                         id={`venue-card-${venue.id}`}
+                        ref={el => cardRefs.current[venue.id] = el}
                       />
                     ))}
                   </div>

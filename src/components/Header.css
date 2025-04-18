@@ -6,8 +6,8 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 60px; /* Consistent height */
-  background: #750787; /* Vibrant purple background */
+  height: var(--header-height);
+  background: #750787;
   color: white;
   border-bottom: 1px solid #ddd;
   z-index: 1000;
@@ -16,7 +16,7 @@
   justify-content: space-between;
   padding: 0 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
+  transition: var(--dark-transition);
 }
 
 /* Dark mode styles - lighter purple for better contrast */
