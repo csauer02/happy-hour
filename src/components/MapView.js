@@ -432,39 +432,6 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     }
   }, [apiKey, initializeMap]);
   
-  // Animate pin bounce effect
-  const bounceMarker = useCallback((marker) => {
-    if (!marker) return;
-    
-    try {
-      const markerElement = marker.content;
-      if (markerElement) {
-        markerElement.style.animation = 'bounce 0.8s ease infinite alternate';
-        
-        if (!document.getElementById('marker-animation-style')) {
-          const style = document.createElement('style');
-          style.id = 'marker-animation-style';
-          style.innerHTML = `
-            @keyframes bounce {
-              0% { transform: translateY(0); }
-              100% { transform: translateY(-10px); }
-            }
-          `;
-          document.head.appendChild(style);
-        }
-        
-        // Stop animation after a few bounces
-        setTimeout(() => {
-          if (markerElement) {
-            markerElement.style.animation = 'none';
-          }
-        }, 2100);
-      }
-    } catch (error) {
-      console.error("Error bouncing marker:", error);
-    }
-  }, []);
-  
   // Center map on marker
   const centerMapOnMarker = useCallback((marker, map) => {
     if (!marker || !map) return;
@@ -476,17 +443,14 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       // Set directly without animation
       map.setCenter(position);
       map.setZoom(16);
-      
-      // Bounce the marker
-      bounceMarker(marker);
     } catch (error) {
       console.error("Error centering on marker:", error);
     }
-  }, [bounceMarker]);
+  }, []);
   
   // Zoom to fit markers in a neighborhood
   const zoomToNeighborhood = useCallback((neighborhood, markers) => {
-    if (!googleMapRef.current || !neighborhood || !markers) return;
+    if (!googleMapRef.current || !neighborhood) return;
     
     try {
       if (!window.google || !window.google.maps) return;
@@ -494,13 +458,11 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       const bounds = new window.google.maps.LatLngBounds();
       let hasMarkers = false;
       
-      // Add marker positions to bounds
+      // Only include markers that are in the filtered venues
       Object.values(markers).forEach(marker => {
-        if (marker && marker._neighborhood === neighborhood && marker.position) {
+        if (marker && marker._neighborhood === neighborhood && marker.position && marker.map !== null) {
           bounds.extend(marker.position);
           hasMarkers = true;
-          // Bounce all markers in this neighborhood
-          bounceMarker(marker);
         }
       });
       
@@ -519,7 +481,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     } catch (error) {
       console.error("Error zooming to neighborhood:", error);
     }
-  }, [bounceMarker, closeActiveInfoWindow]);
+  }, [closeActiveInfoWindow]);
   
   // Update pin styles when selected venue changes
   useEffect(() => {
@@ -608,8 +570,38 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
       console.error("Error showing info window for selected venue:", error);
     }
   }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker, closeActiveInfoWindow]);
+
+  // KEY CHANGE: This is the critical function that ensures marker visibility matches filtered venues
+  const updateMarkersVisibility = useCallback(() => {
+    if (!mapInitializedRef.current || !googleMapRef.current) return;
+    
+    console.log("Updating markers visibility with", filteredVenues.length, "filtered venues");
+    
+    // Create a Set of filtered venue IDs for fast lookup
+    const filteredIds = new Set(filteredVenues.map(v => v.id));
+    
+    // Update ALL markers based on whether they're in the filtered list
+    Object.keys(markersRef.current).forEach(venueId => {
+      const marker = markersRef.current[venueId];
+      if (marker) {
+        // Convert to number for consistent comparison (venue IDs are numbers)
+        const numId = parseInt(venueId, 10);
+        const isVisible = filteredIds.has(numId);
+        
+        // Set map to control visibility
+        marker.map = isVisible ? googleMapRef.current : null;
+        
+        console.log(`Setting marker ${numId} visibility to ${isVisible}`);
+      }
+    });
+  }, [filteredVenues, googleMapRef]);
   
-  // Create or update markers when venues or map changes
+  // Update marker visibility whenever filteredVenues changes
+  useEffect(() => {
+    updateMarkersVisibility();
+  }, [filteredVenues, updateMarkersVisibility]);
+  
+  // Create or update markers when venues change
   useEffect(() => {
     if (!mapInitializedRef.current || !googleMapRef.current || !geocoderRef.current || !venues || venues.length === 0) {
       return;
@@ -630,7 +622,7 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
         // Check if marker already exists
         if (markersRef.current[venue.id]) {
           try {
-            // Update marker visibility
+            // Update marker visibility based on filtered venues
             markersRef.current[venue.id].map = isVisible ? googleMapRef.current : null;
             
             // Update marker appearance
@@ -671,15 +663,17 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                     // Create marker using AdvancedMarkerElement
                     const marker = new window.google.maps.marker.AdvancedMarkerElement({
                       position: results[0].geometry.location,
-                      map: isVisible ? googleMapRef.current : null,
+                      map: isVisible ? googleMapRef.current : null, // Initially set visibility based on filtered state
                       title: venue.RestaurantName || 'Venue',
                       content: pinElement
                     });
 
                     // Store neighborhood for reference
                     marker._neighborhood = venue.Neighborhood || 'Uncategorized';
+                    // Store venue ID for easier reference
+                    marker._venueId = venue.id;
 
-                    // Add click event listener using proper method for accessibility
+                    // Add click event listener
                     marker.addListener('click', () => {
                       // Always clear the previous selection first
                       if (selectedVenue && selectedVenue.id !== venue.id) {
@@ -699,31 +693,6 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
                       ...prev,
                       [venue.id]: marker
                     }));
-                    
-                    // If this is the selected venue, show info window after creation
-                    if (isSelected && selectedVenue) {
-                      setTimeout(() => {
-                        const marker = markersRef.current[venue.id];
-                        if (marker) {
-                          // Create info window content
-                          const infoContent = `
-                            <div style="font-family: 'Roboto', sans-serif; max-width: 200px; padding: 5px;">
-                              <div style="font-weight: bold; color: ${darkMode ? '#b77fdb' : '#750787'}; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid ${darkMode ? '#b77fdb' : '#750787'}; padding-bottom: 4px;">
-                                ${selectedVenue.RestaurantName || 'Venue'}
-                              </div>
-                              <div style="font-size: 12px; margin-bottom: 6px;">${selectedVenue.Deal || ''}</div>
-                              <div style="font-size: 11px; color: ${darkMode ? '#aaa' : '#666'}; font-style: italic; margin-top: 4px;">
-                                ${selectedVenue.Neighborhood || ''}
-                              </div>
-                            </div>
-                          `;
-                          
-                          // Show info window and center on marker
-                          createCustomInfoWindow(infoContent, marker);
-                          centerMapOnMarker(marker, googleMapRef.current);
-                        }
-                      }, 100);
-                    }
                   } catch (error) {
                     console.error("Error creating marker:", error);
                   }
@@ -758,11 +727,14 @@ const MapView = ({ venues, setMapRef, setMarkers, onMarkerClick, selectedVenue, 
     if (!mapInitializedRef.current || !googleMapRef.current || !selectedNeighborhood) return;
     
     try {
+      // First ensure marker visibility is in sync before zooming
+      updateMarkersVisibility();
+      // Then zoom to neighborhood
       zoomToNeighborhood(selectedNeighborhood, markersRef.current);
     } catch (error) {
       console.error("Error in neighborhood zoom:", error);
     }
-  }, [selectedNeighborhood, zoomToNeighborhood]);
+  }, [selectedNeighborhood, zoomToNeighborhood, updateMarkersVisibility]);
   
   return (
     <section id="map-container" className={darkMode ? 'dark-mode' : ''}>

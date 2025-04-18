@@ -15,7 +15,10 @@ export default function App() {
   const [selectedVenue, setSelectedVenue] = useState(null);
   const [activeDay, setActiveDay] = useState('all');
   const [happeningNow, setHappeningNow] = useState(false);
+  // We need these state variables, even if not directly used in this file
+  // eslint-disable-next-line no-unused-vars
   const [mapRef, setMapRef] = useState(null);
+  // eslint-disable-next-line no-unused-vars
   const [markers, setMarkers] = useState({});
   const [darkMode, setDarkMode] = useState(false);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
@@ -90,21 +93,10 @@ export default function App() {
     });
   }, []);
   
-  // Update marker visibility based on filtered venues
-  const updateMarkerVisibility = useCallback((filteredList) => {
-    if (mapRef && Object.keys(markers).length) {
-      allVenues.forEach(venue => {
-        const marker = markers[venue.id];
-        if (marker) {
-          const isVisible = filteredList.some(v => v.id === venue.id);
-          marker.map = isVisible ? mapRef : null;
-        }
-      });
-    }
-  }, [mapRef, markers, allVenues]);
-  
-  // Improved filter application function with better logging
+  // Improved filter application function with clearer logging
   const applyFilters = useCallback((day, isHappeningNow) => {
+    console.log(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}`);
+    
     let filtered = [...allVenues];
     
     // Apply day filter
@@ -118,7 +110,7 @@ export default function App() {
         return value === 'yes';
       });
       
-      console.log(`Applied ${day} filter, remaining venues:`, filtered.length);
+      console.log(`After ${day} filter: ${filtered.length} venues remain`);
     }
     
     // Apply happening now filter
@@ -133,16 +125,16 @@ export default function App() {
           return value === 'yes';
         });
         
-        console.log(`Applied happening now filter for ${todayColumn}, remaining venues:`, filtered.length);
+        console.log(`After 'happening now' filter for ${todayColumn}: ${filtered.length} venues remain`);
       }
     }
     
     // Set filtered venues
     setFilteredVenues(filtered);
     
-    // Update marker visibility based on filtered venues
-    updateMarkerVisibility(filtered);
-  }, [allVenues, updateMarkerVisibility]);
+    // Log IDs of filtered venues for debugging
+    console.log("Filtered venue IDs:", filtered.map(v => v.id));
+  }, [allVenues]);
   
   // Effect to apply filters when filter state changes
   useEffect(() => {
@@ -160,7 +152,7 @@ export default function App() {
     localStorage.setItem('darkMode', newDarkMode.toString());
   };
   
-  // Simplified unified venue selection handler with improved selection handling
+  // Simplified unified venue selection handler
   const handleVenueSelect = (venueId) => {
     // Always clear previous selection first
     setSelectedVenue(null);
@@ -193,8 +185,10 @@ export default function App() {
     setSelectedNeighborhood(neighborhood);
   };
   
-  // Improved handle day filter change with better logic
+  // Improved handle day filter change
   const handleDayChange = (day) => {
+    console.log(`Day filter changing from ${activeDay} to ${day}`);
+    
     // Turn off "Happening Now" when "All Days" is selected
     if (day === 'all' && happeningNow) {
       setHappeningNow(false);
@@ -222,14 +216,12 @@ export default function App() {
         setHappeningNow(false);
       }
     }
-    
-    // Log filter state for debugging
-    console.log(`Day changed to: ${day}, happening now: ${happeningNow}`);
   };
   
   // Improved handle happening now toggle
   const handleHappeningNowToggle = () => {
     const newState = !happeningNow;
+    console.log(`Toggling 'happening now' to ${newState}`);
     setHappeningNow(newState);
     
     if (newState) {
@@ -242,9 +234,6 @@ export default function App() {
         setActiveDay(todayString);
       }
     }
-    
-    // Log happening now toggle for debugging
-    console.log(`Happening now toggled to: ${newState}, active day: ${activeDay}`);
   };
   
   return (
@@ -272,7 +261,7 @@ export default function App() {
         
         <MapView 
           venues={venues}
-          filteredVenues={filteredVenues}
+          filteredVenues={filteredVenues} 
           selectedVenue={selectedVenue}
           setMapRef={setMapRef}
           setMarkers={setMarkers}
