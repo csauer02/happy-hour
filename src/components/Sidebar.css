@@ -12,6 +12,8 @@
   z-index: 10;
   box-shadow: 2px 0 5px var(--card-shadow);
   transition: var(--dark-transition);
+  /* Add scroll padding to account for sticky headers */
+  scroll-padding-top: 50px;
 }
 
 #sidebar.dark-mode {
@@ -107,6 +109,7 @@
 /* Venue list container */
 .venue-list {
   padding-left: 0.5rem;
+  padding-top: 0.4rem; /* Add some padding at the top for better spacing */
   border-left: 3px solid var(--accent-color);
   contain: layout style;
   position: relative;
@@ -123,6 +126,7 @@
 .selected-venue-card {
   box-shadow: 0 0 0 2px var(--primary-color) !important;
   position: relative !important;
+  z-index: 5;
 }
 
 /* No Results Message */

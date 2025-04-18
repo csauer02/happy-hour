@@ -49,18 +49,53 @@ const Sidebar = ({
     }
   }, [selectedNeighborhood, expandedNeighborhood]);
   
+  // Calculate proper scroll position accounting for sticky headers
+  const scrollToElement = (element, headerHeight = 45) => {
+    if (!element || !sidebarRef.current) return;
+    
+    const sidebarRect = sidebarRef.current.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    
+    const relativeTop = elementRect.top - sidebarRect.top;
+    const elementHeight = elementRect.height;
+    
+    // If the element is already fully visible within the viewport, don't scroll
+    if (
+      relativeTop >= headerHeight && 
+      relativeTop + elementHeight <= sidebarRect.height
+    ) {
+      return;
+    }
+    
+    // Calculate the offset accounting for sticky header
+    let scrollOffset;
+    
+    if (relativeTop < headerHeight) {
+      // If element is above the viewport, scroll it to just below the header
+      scrollOffset = sidebarRef.current.scrollTop + (relativeTop - headerHeight - 5);
+    } else if (relativeTop + elementHeight > sidebarRect.height) {
+      // If element is below the viewport, scroll it into view
+      scrollOffset = sidebarRef.current.scrollTop + ((relativeTop + elementHeight) - sidebarRect.height + 10);
+    } else {
+      return; // Element is already fully visible
+    }
+    
+    // Perform the scroll with smooth behavior
+    sidebarRef.current.scrollTo({
+      top: scrollOffset,
+      behavior: 'smooth'
+    });
+  };
+  
   // Scroll to neighborhood when it expands
   useEffect(() => {
     if (expandedNeighborhood && neighborhoodRefs.current[expandedNeighborhood]) {
       const headerElement = neighborhoodRefs.current[expandedNeighborhood];
       
       if (headerElement) {
-        // Scroll the neighborhood header to the top of the sidebar with a small offset
+        // Use custom scroll function
         setTimeout(() => {
-          headerElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start'
-          });
+          scrollToElement(headerElement, 0); // No offset for neighborhood headers
         }, 100);
       }
     }
@@ -77,12 +112,12 @@ const Sidebar = ({
         setTimeout(() => {
           const cardElement = cardRefs.current[selectedVenue.id];
           if (cardElement) {
-            cardElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'nearest' 
-            });
+            scrollToElement(cardElement);
             
             // Add selected class for styling
+            Object.values(cardRefs.current).forEach(ref => {
+              if (ref) ref.classList.remove('selected-venue-card');
+            });
             cardElement.classList.add('selected-venue-card');
           }
         }, 300);
@@ -90,32 +125,17 @@ const Sidebar = ({
         // Neighborhood already expanded, directly scroll to card
         const cardElement = cardRefs.current[selectedVenue.id];
         if (cardElement) {
-          cardElement.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'nearest' 
-          });
+          scrollToElement(cardElement);
           
           // Add selected class for styling
+          Object.values(cardRefs.current).forEach(ref => {
+            if (ref) ref.classList.remove('selected-venue-card');
+          });
           cardElement.classList.add('selected-venue-card');
         }
       }
     }
   }, [selectedVenue, expandedNeighborhood]);
-  
-  // Clear selection classes when selected venue changes
-  useEffect(() => {
-    // Remove selected class from all cards
-    Object.values(cardRefs.current).forEach(cardRef => {
-      if (cardRef) {
-        cardRef.classList.remove('selected-venue-card');
-      }
-    });
-    
-    // Add selected class to current selection if it exists
-    if (selectedVenue && cardRefs.current[selectedVenue.id]) {
-      cardRefs.current[selectedVenue.id].classList.add('selected-venue-card');
-    }
-  }, [selectedVenue]);
   
   const neighborhoodGroups = getNeighborhoodGroups();
   
