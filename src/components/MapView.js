@@ -18,14 +18,12 @@ const MapView = ({
 }) => {
   const mapContainerRef = useRef(null);
   const googleMapRef = useRef(null);
-  const geocoderRef = useRef(null);
   const markersRef = useRef({});
   const activeInfoWindowRef = useRef(null);
   const [userLocation, setUserLocation] = useState(null);
   const mapInitializedRef = useRef(false);
   const previousSelectedVenueRef = useRef(null);
   const filteredVenueIdsRef = useRef(new Set());
-  const geocodeCache = useRef({});
   const [debugInfo, setDebugInfo] = useState({
     markersCreated: 0,
     markersVisible: 0,
@@ -66,59 +64,6 @@ const MapView = ({
     '#FFDA00', // Intersex yellow
     '#613915'  // PoC brown
   ], []);
-
-  // Helper function to get cached geocoded locations
-  const getGeocodedLocation = useCallback((address, venue) => {
-    return new Promise((resolve, reject) => {
-      // Check if we already have this address cached
-      if (geocodeCache.current[address]) {
-        debugLog(`Using cached location for venue ${venue.id}`);
-        resolve(geocodeCache.current[address]);
-        return;
-      }
-      
-      // If not cached and we're over limit, just resolve with a default location
-      // This prevents hitting API limits while testing
-      if (geocodeCache.current._overLimit === true) {
-        debugLog(`Using fallback location for venue ${venue.id} (over limit)`);
-        // Use Atlanta as fallback - adjust these coordinates as needed
-        const fallbackLocation = { lat: 33.7490 + (Math.random() * 0.05), lng: -84.3880 + (Math.random() * 0.05) };
-        resolve(fallbackLocation);
-        return;
-      }
-      
-      // Otherwise geocode the address
-      if (!geocoderRef.current) {
-        reject(new Error("Geocoder not initialized"));
-        return;
-      }
-      
-      // Add delay between geocoding requests
-      setTimeout(() => {
-        geocoderRef.current.geocode({ address }, (results, status) => {
-          if (status === 'OK' && results && results[0]) {
-            // Cache the result
-            const location = results[0].geometry.location;
-            geocodeCache.current[address] = location;
-            debugLog(`Geocoded and cached location for venue ${venue.id}`);
-            resolve(location);
-          } else if (status === 'OVER_QUERY_LIMIT') {
-            console.warn("Geocoding over query limit - using fallback locations");
-            // Mark that we're over limit to avoid further requests
-            geocodeCache.current._overLimit = true;
-            // Use Atlanta as fallback with slight randomization
-            const fallbackLocation = { lat: 33.7490 + (Math.random() * 0.05), lng: -84.3880 + (Math.random() * 0.05) };
-            resolve(fallbackLocation);
-          } else {
-            console.warn(`Geocoding failed for venue ${venue.id}: ${status}`);
-            // Use fallback location for failed geocoding
-            const fallbackLocation = { lat: 33.7490 + (Math.random() * 0.05), lng: -84.3880 + (Math.random() * 0.05) };
-            resolve(fallbackLocation);
-          }
-        });
-      }, 200); // 200ms delay between geocoding requests
-    });
-  }, [debugLog]);
 
   // Helper function to create a circle marker for user location
   const createCircleMarker = useCallback((color) => {
@@ -316,8 +261,6 @@ const MapView = ({
           <div>Visible markers: ${visibleMarkers.length}</div>
           <div>Hidden markers: ${hiddenMarkers.length}</div>
           <div>Filtered venues: ${filteredVenues.length}</div>
-          <div>Geocode cached: ${Object.keys(geocodeCache.current).length}</div>
-          <div>API limit reached: ${geocodeCache.current._overLimit ? 'Yes' : 'No'}</div>
         </div>
         <div style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
           <div><strong>Visible IDs:</strong></div>
@@ -462,7 +405,6 @@ const MapView = ({
       };
       
       const map = new window.google.maps.Map(mapContainerRef.current, mapOptions);
-      const geocoder = new window.google.maps.Geocoder();
       
       // Add passive event listeners for touch events
       if (map.getDiv()) {
@@ -471,7 +413,6 @@ const MapView = ({
       }
       
       googleMapRef.current = map;
-      geocoderRef.current = geocoder;
       mapInitializedRef.current = true;
       
       setMapRef(map);
@@ -663,19 +604,6 @@ const MapView = ({
     
     return infoWindow;
   }, [darkMode, onMarkerClick, closeActiveInfoWindow]);
-  
-  // Extract address from Google Maps URL
-  const getAddressFromMapsURL = useCallback((url) => {
-    if (!url) return null;
-    
-    try {
-      const parsed = new URL(url);
-      const params = new URLSearchParams(parsed.search);
-      return params.get('q');
-    } catch (e) {
-      return null;
-    }
-  }, []);
 
   // Load Google Maps API
   useEffect(() => {
@@ -1017,9 +945,9 @@ const MapView = ({
     }
   }, [filteredVenues, debugLog, debugMode]);
   
-  // FIXED: This is the improved marker creation effect with rate limiting
+  // KEY CHANGE: New marker creation function that uses Latitude/Longitude from the venue data
   useEffect(() => {
-    if (!mapInitializedRef.current || !googleMapRef.current || !geocoderRef.current || !venues || venues.length === 0) {
+    if (!mapInitializedRef.current || !googleMapRef.current || !venues || venues.length === 0) {
       return;
     }
     
@@ -1037,115 +965,101 @@ const MapView = ({
     
     debugLog(`Creating ${missingVenues.length} new markers`);
     
-    // Process venues one by one with a delay
-    let index = 0;
-    const processNextVenue = () => {
-      if (index >= missingVenues.length) {
-        debugLog(`Finished creating all ${missingVenues.length} markers`);
-        return;
-      }
-      
-      const venue = missingVenues[index++];
+    // Process each venue without delay since we're not geocoding anymore
+    missingVenues.forEach(venue => {
       const venueIdStr = venue.id.toString();
       
-      // Skip if already exists (could have been created while processing others)
+      // Skip if already exists
       if (markersRef.current[venueIdStr]) {
-        processNextVenue();
         return;
       }
       
-      if (venue.MapsURL) {
-        const address = getAddressFromMapsURL(venue.MapsURL);
-        if (address) {
-          // Use cached geocoding with fallback
-          getGeocodedLocation(address, venue)
-            .then(location => {
-              // Check if marker already exists (could have been created while waiting)
-              if (!markersRef.current[venueIdStr]) {
-                // Check if venue should be visible based on current filters
-                const isVisible = filteredVenueIdsRef.current.has(venueIdStr);
-                const isSelected = selectedVenue && selectedVenue.id === venue.id;
-                
-                // Create marker
-                const pinElement = createPinElement(
-                  getPinColor(venue.id), 
-                  isSelected,
-                  venue.id
-                );
-                
-                try {
-                  const marker = new window.google.maps.marker.AdvancedMarkerElement({
-                    position: location,
-                    map: isVisible ? googleMapRef.current : null,
-                    title: venue.RestaurantName || 'Venue',
-                    content: pinElement
-                  });
-                  
-                  // Store properties
-                  marker._neighborhood = venue.Neighborhood || 'Uncategorized';
-                  marker._venueId = venue.id.toString();
-                  
-                  // Add click handler
-                  marker.addListener('click', () => {
-                    debugLog(`Marker clicked: ${venue.id}`);
-                    onMarkerClick(venue.id);
-                  });
-                  
-                  // Store marker reference
-                  markersRef.current[venueIdStr] = marker;
-                  
-                  // Update markers in state
-                  setMarkers(prev => ({
-                    ...prev,
-                    [venueIdStr]: marker
-                  }));
-                  
-                  debugLog(`Created marker for venue ${venue.id}`);
-                  
-                  // Update debug info
-                  if (debugMode) {
-                    setDebugInfo(prev => ({
-                      ...prev,
-                      markersCreated: Object.keys(markersRef.current).length,
-                      lastAction: `Created marker for venue ${venue.id}`
-                    }));
-                  }
-                } catch (error) {
-                  console.error(`Error creating marker for venue ${venue.id}:`, error);
-                }
-              }
-              
-              // Process next venue with a delay
-              setTimeout(processNextVenue, 50);
-            })
-            .catch(error => {
-              console.error(`Error getting location for venue ${venue.id}:`, error);
-              // Continue to next venue even if there's an error
-              setTimeout(processNextVenue, 50);
-            });
+      try {
+        // Check if venue has valid latitude and longitude
+        if (venue.Latitude && venue.Longitude) {
+          // Parse the coordinates (ensure they're numbers)
+          const lat = parseFloat(venue.Latitude);
+          const lng = parseFloat(venue.Longitude);
+          
+          // Validate coordinates (simple check)
+          if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            debugLog(`Invalid coordinates for venue ${venue.id}: ${lat}, ${lng}`);
+            return;
+          }
+          
+          // Create location object
+          const location = { lat, lng };
+          
+          // Check if venue should be visible based on current filters
+          const isVisible = filteredVenueIdsRef.current.has(venueIdStr);
+          const isSelected = selectedVenue && selectedVenue.id === venue.id;
+          
+          // Create marker
+          const pinElement = createPinElement(
+            getPinColor(venue.id), 
+            isSelected,
+            venue.id
+          );
+          
+          // Create and add marker
+          const { AdvancedMarkerElement } = window.google.maps.marker;
+          const marker = new AdvancedMarkerElement({
+            position: location,
+            map: isVisible ? googleMapRef.current : null,
+            title: venue.RestaurantName || 'Venue',
+            content: pinElement
+          });
+          
+          // Store properties
+          marker._neighborhood = venue.Neighborhood || 'Uncategorized';
+          marker._venueId = venue.id.toString();
+          
+          // Add click handler
+          marker.addListener('click', () => {
+            debugLog(`Marker clicked: ${venue.id}`);
+            onMarkerClick(venue.id);
+          });
+          
+          // Store marker reference
+          markersRef.current[venueIdStr] = marker;
+          
+          // Update markers in state
+          setMarkers(prev => ({
+            ...prev,
+            [venueIdStr]: marker
+          }));
+          
+          debugLog(`Created marker for venue ${venue.id} at ${lat}, ${lng}`);
+          
         } else {
-          // No address found, skip to next venue
-          setTimeout(processNextVenue, 50);
+          debugLog(`Missing coordinates for venue ${venue.id}`);
         }
-      } else {
-        // No maps URL, skip to next venue
-        setTimeout(processNextVenue, 50);
+      } catch (error) {
+        console.error(`Error creating marker for venue ${venue.id}:`, error);
+        setDebugInfo(prev => ({
+          ...prev,
+          errors: [...prev.errors, `Error creating marker for venue ${venue.id}: ${error.message}`]
+        }));
       }
-    };
+    });
     
-    // Start processing venues
-    processNextVenue();
+    // Update debug info if debugging
+    if (debugMode) {
+      setDebugInfo(prev => ({
+        ...prev,
+        markersCreated: Object.keys(markersRef.current).length,
+        lastAction: `Created ${missingVenues.length} markers`
+      }));
+    }
   }, [
     venues, 
     selectedVenue, 
-    getAddressFromMapsURL, 
     onMarkerClick, 
     setMarkers, 
     createPinElement, 
     getPinColor,
     debugLog,
-    debugMode,
-    getGeocodedLocation
+    debugMode
   ]);
   
   // Effect to handle neighborhood zoom when selected neighborhood changes
@@ -1247,4 +1161,4 @@ const MapView = ({
   );
 };
 
-export default MapView;  
+export default MapView;

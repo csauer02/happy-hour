@@ -97,15 +97,59 @@ export default function App() {
         // Add IDs to each venue
         const dataWithIds = sortedData.map((venue, i) => ({ ...venue, id: i }));
         
-        setVenues(dataWithIds);
-        setAllVenues(dataWithIds);
-        setFilteredVenues(dataWithIds);
+        // Add validation for coordinates
+        const dataWithIdsAndValidation = dataWithIds.map(venue => {
+          // Flag if venue has valid coordinates
+          let hasValidCoordinates = false;
+          
+          // Check if venue has coordinates
+          if (venue.Latitude && venue.Longitude) {
+            const lat = parseFloat(venue.Latitude);
+            const lng = parseFloat(venue.Longitude);
+            
+            // Basic validation
+            hasValidCoordinates = !isNaN(lat) && !isNaN(lng) && 
+                                  lat >= -90 && lat <= 90 && 
+                                  lng >= -180 && lng <= 180;
+            
+            if (!hasValidCoordinates && debugMode) {
+              console.warn(`Venue ${venue.RestaurantName} has invalid coordinates: ${venue.Latitude}, ${venue.Longitude}`);
+            }
+          } else if (debugMode) {
+            console.warn(`Venue ${venue.RestaurantName} is missing coordinates`);
+          }
+          
+          return { 
+            ...venue, 
+            hasValidCoordinates 
+          };
+        });
+        
+        // Log coordinates status summary if in debug mode
+        if (debugMode) {
+          const totalVenues = dataWithIdsAndValidation.length;
+          const venuesWithCoordinates = dataWithIdsAndValidation.filter(v => v.hasValidCoordinates).length;
+          
+          debugLog(`Coordinates summary: ${venuesWithCoordinates}/${totalVenues} venues have valid coordinates`);
+          
+          if (venuesWithCoordinates < totalVenues) {
+            const missingCoordinates = dataWithIdsAndValidation
+              .filter(v => !v.hasValidCoordinates)
+              .map(v => v.RestaurantName);
+            
+            debugLog(`Venues missing coordinates:`, missingCoordinates);
+          }
+        }
+        
+        setVenues(dataWithIdsAndValidation);
+        setAllVenues(dataWithIdsAndValidation);
+        setFilteredVenues(dataWithIdsAndValidation);
         setIsLoading(false);
         
         // Log venues for debugging
         if (debugMode) {
-          debugLog(`Loaded ${dataWithIds.length} venues`);
-          debugLog("First venue:", dataWithIds[0]);
+          debugLog(`Loaded ${dataWithIdsAndValidation.length} venues`);
+          debugLog("First venue:", dataWithIdsAndValidation[0]);
         }
       },
       error: (err) => {
