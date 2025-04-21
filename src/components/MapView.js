@@ -34,6 +34,10 @@ const MapView = ({
     errors: []
   });
   
+  // Add state for neighborhood focus and venue selection
+  const [focusedNeighborhood, setFocusedNeighborhood] = useState(null);
+  const [isVenueSelected, setIsVenueSelected] = useState(false);
+  
   // Create a debug log wrapper function
   const debugLog = useCallback((message, data = null) => {
     if (debugMode) {
@@ -133,8 +137,8 @@ const MapView = ({
     return flagColors[venueId % flagColors.length];
   }, [flagColors]);
   
-  // Create pin element for markers
-  const createPinElement = useCallback((color = '#FF0000', isSelected = false, venueId = null) => {
+  // Updated create pin element function with opacity support
+  const createPinElement = useCallback((color = '#FF0000', isSelected = false, venueId = null, opacity = 1) => {
     // Create SVG marker
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${isSelected ? '36' : '28'}" height="${isSelected ? '36' : '28'}">
@@ -143,6 +147,7 @@ const MapView = ({
           stroke="#000000" 
           stroke-width="1" 
           d="M12,2C8.14,2 5,5.14 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.86 -3.14,-7 -7,-7zM12,4c1.1,0 2,0.9 2,2c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2c0,-1.1 0.9,-2 2,-2z"
+          opacity="${opacity}"
         />
         ${venueId !== null && debugMode ? `<text x="12" y="11" font-size="7" text-anchor="middle" fill="white" font-weight="bold">${venueId}</text>` : ''}
       </svg>
@@ -746,7 +751,17 @@ const MapView = ({
     }
   }, []);
   
-  // Zoom to fit markers in a neighborhood
+  // Update focusedNeighborhood when selectedNeighborhood changes
+  useEffect(() => {
+    setFocusedNeighborhood(selectedNeighborhood);
+  }, [selectedNeighborhood]);
+  
+  // Track venue selection state
+  useEffect(() => {
+    setIsVenueSelected(selectedVenue !== null);
+  }, [selectedVenue]);
+  
+  // Updated zooming for neighborhood selection - includes all venues
   const zoomToNeighborhood = useCallback((neighborhood, markers) => {
     if (!googleMapRef.current || !neighborhood) return;
     
@@ -759,12 +774,12 @@ const MapView = ({
       // Debug
       debugLog(`Zooming to neighborhood: ${neighborhood}`);
       
-      // Only include markers that are in the filtered venues and in this neighborhood
+      // Include only markers in this neighborhood (regardless of filtering)
+      // This ensures we zoom to all venues in the neighborhood, even if they're filtered out
       Object.values(markers).forEach(marker => {
         if (marker && 
             marker._neighborhood === neighborhood && 
-            marker.position && 
-            filteredVenueIdsRef.current.has(marker._venueId.toString())) {
+            marker.position) {
           bounds.extend(marker.position);
           hasMarkers = true;
           debugLog(`Including marker ${marker._venueId} in bounds`);
@@ -795,6 +810,70 @@ const MapView = ({
       }));
     }
   }, [closeActiveInfoWindow, debugLog]);
+  
+  // Update markers opacity based on neighborhood and venue selection
+  useEffect(() => {
+    if (!mapInitializedRef.current || !googleMapRef.current) return;
+    
+    debugLog(`Updating marker opacity - Selected Neighborhood: ${focusedNeighborhood}, Venue Selected: ${isVenueSelected}`);
+    
+    // Process each marker to update its appearance based on selection
+    Object.entries(markersRef.current).forEach(([venueId, marker]) => {
+      if (!marker || !marker.content) return;
+      
+      const venue = venues.find(v => v.id.toString() === venueId);
+      if (!venue) return;
+      
+      let opacity = 1.0; // Default full opacity
+      let isHighlighted = false;
+      
+      // Case 1: A specific venue is selected
+      if (isVenueSelected && selectedVenue) {
+        if (selectedVenue.id.toString() === venueId) {
+          // Selected venue - full opacity
+          opacity = 1.0;
+          isHighlighted = true;
+        } else {
+          // Non-selected venues - reduced opacity
+          opacity = 0.2;
+        }
+      }
+      // Case 2: A neighborhood is selected but no specific venue
+      else if (focusedNeighborhood && !isVenueSelected) {
+        if (venue.Neighborhood === focusedNeighborhood) {
+          // Venue in selected neighborhood - full opacity
+          opacity = 1.0;
+        } else {
+          // Venue in other neighborhoods - reduced opacity
+          opacity = 0.2;
+        }
+      }
+      
+      // Update the marker appearance
+      const pinElement = createPinElement(
+        getPinColor(venue.id),
+        isHighlighted || (selectedVenue && selectedVenue.id.toString() === venueId),
+        venue.id,
+        opacity
+      );
+      
+      // Replace the existing content
+      const oldContent = marker.content;
+      if (oldContent && oldContent.parentNode) {
+        oldContent.parentNode.replaceChild(pinElement, oldContent);
+      } else {
+        marker.content = pinElement;
+      }
+    });
+  }, [
+    focusedNeighborhood, 
+    isVenueSelected, 
+    selectedVenue, 
+    venues, 
+    createPinElement, 
+    getPinColor, 
+    debugLog
+  ]);
   
   // Update pin styles when selected venue changes
   useEffect(() => {
@@ -1168,4 +1247,4 @@ const MapView = ({
   );
 };
 
-export default MapView;
+export default MapView;  

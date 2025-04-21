@@ -115,7 +115,7 @@ export default function App() {
     });
   }, [debugMode, debugLog]);
   
-  // Improved filter application function with clearer logging
+  // Improved filter application function with clearer logic separation
   const applyFilters = useCallback((day, isHappeningNow, neighborhood = null) => {
     console.log(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}, neighborhood: ${neighborhood}`);
     if (debugMode) {
@@ -124,7 +124,7 @@ export default function App() {
     
     let filtered = [...allVenues];
     
-    // Apply day filter
+    // Apply day filter - This is the ONLY actual filtering that removes pins from the map
     if (day !== 'all') {
       const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
       const column = dayMapping[day];
@@ -141,7 +141,7 @@ export default function App() {
       }
     }
     
-    // Apply happening now filter
+    // Apply happening now filter - Also actually filters results
     if (isHappeningNow) {
       const today = new Date().getDay();
       const dayMapping = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri' };
@@ -160,13 +160,12 @@ export default function App() {
       }
     }
     
-    // Apply neighborhood filter
-    if (neighborhood) {
-      filtered = filtered.filter(venue => venue.Neighborhood === neighborhood);
-      console.log(`After neighborhood filter (${neighborhood}): ${filtered.length} venues remain`);
-      if (debugMode) {
-        debugLog(`After neighborhood filter (${neighborhood}): ${filtered.length} venues remain`);
-      }
+    // NO LONGER apply neighborhood filter here - neighborhood selection is now a visual highlight
+    // not a filtering operation
+    // If we're in debug mode, still log the count for that neighborhood
+    if (neighborhood && debugMode) {
+      const neighborhoodCount = filtered.filter(venue => venue.Neighborhood === neighborhood).length;
+      debugLog(`Neighborhood ${neighborhood} contains ${neighborhoodCount} venues after day filtering`);
     }
     
     // Log IDs of the venues that passed all filters - for debugging
@@ -175,18 +174,20 @@ export default function App() {
       debugLog("Filtered venue IDs:", filtered.map(v => v.id));
     }
     
-    // Set filtered venues - this is our single source of truth for what's visible
+    // Set filtered venues - this only affects visibility based on day filters
     setFilteredVenues(filtered);
     
     return filtered;
   }, [allVenues, debugMode, debugLog]);
   
-  // Apply filters whenever filter state changes
+  // Apply filters whenever filter state changes - only day and happening now are actual filters
   useEffect(() => {
     if (!isLoading) {
-      applyFilters(activeDay, happeningNow, selectedNeighborhood);
+      // We no longer pass selectedNeighborhood to applyFilters
+      // because neighborhood selection is now just a visual highlight
+      applyFilters(activeDay, happeningNow);
     }
-  }, [activeDay, happeningNow, selectedNeighborhood, applyFilters, isLoading]);
+  }, [activeDay, happeningNow, applyFilters, isLoading]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -197,7 +198,7 @@ export default function App() {
     localStorage.setItem('darkMode', newDarkMode.toString());
   };
   
-  // Unified venue selection handler
+  // Unified venue selection handler - with improved behavior
   const handleVenueSelect = (venueId) => {
     // Always clear previous selection first
     setSelectedVenue(null);
@@ -207,8 +208,9 @@ export default function App() {
       return;
     }
     
-    // Find the venue in the venues array
-    const selected = venues.find(v => v.id === venueId);
+    // Find the venue in the complete venues array, not just filtered
+    // This ensures we can select any venue even if it's filtered out by day
+    const selected = allVenues.find(v => v.id === venueId);
     if (!selected) return;
     
     // Set the new selected venue
@@ -285,6 +287,12 @@ export default function App() {
       
       if (todayString && activeDay !== todayString) {
         setActiveDay(todayString);
+      }
+    } else {
+      // When turning off "Happening Now", reset to "All Days"
+      setActiveDay('all');
+      if (debugMode) {
+        debugLog('Resetting day filter to "All Days" after turning off "Happening Now"');
       }
     }
   };
