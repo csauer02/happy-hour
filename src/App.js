@@ -15,14 +15,12 @@ export default function App() {
   const [selectedVenue, setSelectedVenue] = useState(null);
   const [activeDay, setActiveDay] = useState('all');
   const [happeningNow, setHappeningNow] = useState(false);
-  // We need these state variables, even if not directly used in this file
-  // eslint-disable-next-line no-unused-vars
   const [mapRef, setMapRef] = useState(null);
-  // eslint-disable-next-line no-unused-vars
   const [markers, setMarkers] = useState({});
   const [darkMode, setDarkMode] = useState(false);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [debugMode, setDebugMode] = useState(false);
   
   // Check for system preferences and saved dark mode preference on initial load
   useEffect(() => {
@@ -45,6 +43,10 @@ export default function App() {
       const savedDarkMode = localStorage.getItem('darkMode') === 'true';
       setDarkMode(savedDarkMode);
     }
+    
+    // Check for saved debug mode
+    const savedDebugMode = localStorage.getItem('debugMode') === 'true';
+    setDebugMode(savedDebugMode);
   }, []);
   
   // Effect to apply dark mode class to body when darkMode changes
@@ -55,6 +57,17 @@ export default function App() {
       document.body.classList.remove('dark-mode');
     }
   }, [darkMode]);
+  
+  // Debug logging helper
+  const debugLog = useCallback((message, data) => {
+    if (debugMode) {
+      if (data) {
+        console.log(`%c[APP DEBUG] ${message}`, 'background: #4CAF50; color: white; padding: 2px 5px; border-radius: 3px;', data);
+      } else {
+        console.log(`%c[APP DEBUG] ${message}`, 'background: #4CAF50; color: white; padding: 2px 5px; border-radius: 3px;');
+      }
+    }
+  }, [debugMode]);
   
   // Load CSV data on component mount
   useEffect(() => {
@@ -67,7 +80,10 @@ export default function App() {
       download: true,
       header: true,
       complete: (results) => {
-        console.log("CSV Data loaded:", results.data[0]); // Log first venue to help debug
+        // Add debug output to see raw data
+        if (debugMode) {
+          debugLog("Raw CSV data (first item):", results.data[0]);
+        }
         
         // Sort by neighborhood
         const sortedData = results.data
@@ -85,17 +101,26 @@ export default function App() {
         setAllVenues(dataWithIds);
         setFilteredVenues(dataWithIds);
         setIsLoading(false);
+        
+        // Log venues for debugging
+        if (debugMode) {
+          debugLog(`Loaded ${dataWithIds.length} venues`);
+          debugLog("First venue:", dataWithIds[0]);
+        }
       },
       error: (err) => {
         console.error('Error parsing CSV:', err);
         setIsLoading(false);
       }
     });
-  }, []);
+  }, [debugMode, debugLog]);
   
   // Improved filter application function with clearer logging
-  const applyFilters = useCallback((day, isHappeningNow) => {
-    console.log(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}`);
+  const applyFilters = useCallback((day, isHappeningNow, neighborhood = null) => {
+    console.log(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}, neighborhood: ${neighborhood}`);
+    if (debugMode) {
+      debugLog(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}, neighborhood: ${neighborhood}`);
+    }
     
     let filtered = [...allVenues];
     
@@ -111,6 +136,9 @@ export default function App() {
       });
       
       console.log(`After ${day} filter: ${filtered.length} venues remain`);
+      if (debugMode) {
+        debugLog(`After ${day} filter: ${filtered.length} venues remain`);
+      }
     }
     
     // Apply happening now filter
@@ -126,22 +154,39 @@ export default function App() {
         });
         
         console.log(`After 'happening now' filter for ${todayColumn}: ${filtered.length} venues remain`);
+        if (debugMode) {
+          debugLog(`After 'happening now' filter for ${todayColumn}: ${filtered.length} venues remain`);
+        }
       }
     }
     
-    // Set filtered venues
+    // Apply neighborhood filter
+    if (neighborhood) {
+      filtered = filtered.filter(venue => venue.Neighborhood === neighborhood);
+      console.log(`After neighborhood filter (${neighborhood}): ${filtered.length} venues remain`);
+      if (debugMode) {
+        debugLog(`After neighborhood filter (${neighborhood}): ${filtered.length} venues remain`);
+      }
+    }
+    
+    // Log IDs of the venues that passed all filters - for debugging
+    console.log("Filtered venue IDs:", filtered.map(v => v.id));
+    if (debugMode) {
+      debugLog("Filtered venue IDs:", filtered.map(v => v.id));
+    }
+    
+    // Set filtered venues - this is our single source of truth for what's visible
     setFilteredVenues(filtered);
     
-    // Log IDs of filtered venues for debugging
-    console.log("Filtered venue IDs:", filtered.map(v => v.id));
-  }, [allVenues]);
+    return filtered;
+  }, [allVenues, debugMode, debugLog]);
   
-  // Effect to apply filters when filter state changes
+  // Apply filters whenever filter state changes
   useEffect(() => {
     if (!isLoading) {
-      applyFilters(activeDay, happeningNow);
+      applyFilters(activeDay, happeningNow, selectedNeighborhood);
     }
-  }, [activeDay, happeningNow, applyFilters, isLoading]);
+  }, [activeDay, happeningNow, selectedNeighborhood, applyFilters, isLoading]);
   
   // Handle dark mode toggle
   const handleDarkModeToggle = () => {
@@ -152,7 +197,7 @@ export default function App() {
     localStorage.setItem('darkMode', newDarkMode.toString());
   };
   
-  // Simplified unified venue selection handler
+  // Unified venue selection handler
   const handleVenueSelect = (venueId) => {
     // Always clear previous selection first
     setSelectedVenue(null);
@@ -170,8 +215,12 @@ export default function App() {
     setSelectedVenue(selected);
     
     // If selecting a venue, also select its neighborhood
-    if (selected.Neighborhood) {
+    if (selected.Neighborhood && selected.Neighborhood !== selectedNeighborhood) {
       setSelectedNeighborhood(selected.Neighborhood);
+    }
+    
+    if (debugMode) {
+      debugLog(`Selected venue: ${venueId}`, selected);
     }
   };
   
@@ -183,6 +232,10 @@ export default function App() {
     }
     
     setSelectedNeighborhood(neighborhood);
+    
+    if (debugMode) {
+      debugLog(`Selected neighborhood: ${neighborhood}`);
+    }
   };
   
   // Improved handle day filter change
@@ -236,6 +289,25 @@ export default function App() {
     }
   };
   
+  // Handle debug mode toggle
+  const handleDebugModeToggle = () => {
+    const newDebugMode = !debugMode;
+    setDebugMode(newDebugMode);
+    
+    // Save preference to localStorage
+    localStorage.setItem('debugMode', newDebugMode.toString());
+    
+    console.log(`Debug mode ${newDebugMode ? 'enabled' : 'disabled'}`);
+    
+    // Force markers to update with debug visibility
+    if (newDebugMode && mapRef) {
+      setTimeout(() => {
+        console.log("Triggering marker debug refresh");
+        // This will trigger a re-render with debug mode
+      }, 500);
+    }
+  };
+  
   return (
     <div className={`app-container ${darkMode ? 'dark-mode' : ''}`}>
       <Header 
@@ -245,6 +317,8 @@ export default function App() {
         onHappeningNowToggle={handleHappeningNowToggle}
         darkMode={darkMode}
         onDarkModeToggle={handleDarkModeToggle}
+        debugMode={debugMode}
+        onDebugModeToggle={handleDebugModeToggle}
       />
       
       <main id="main-content">
@@ -269,10 +343,32 @@ export default function App() {
           darkMode={darkMode}
           selectedNeighborhood={selectedNeighborhood}
           isLoading={isLoading}
+          debugMode={debugMode}
+          key={`map-${debugMode}`} // Force re-mounting when debug mode changes
         />
       </main>
       
       <Footer darkMode={darkMode} />
+      
+      {debugMode && (
+        <div 
+          style={{
+            position: 'fixed',
+            bottom: '10px',
+            right: '10px',
+            background: 'rgba(255, 87, 34, 0.9)',
+            color: 'white',
+            padding: '5px 10px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            zIndex: 10000,
+            cursor: 'pointer'
+          }}
+          onClick={handleDebugModeToggle}
+        >
+          DEBUG MODE ON
+        </div>
+      )}
     </div>
   );
 }

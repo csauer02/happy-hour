@@ -7,7 +7,9 @@ const Header = ({
   onDayChange, 
   onHappeningNowToggle, 
   darkMode, 
-  onDarkModeToggle
+  onDarkModeToggle,
+  debugMode,
+  onDebugModeToggle
 }) => {
   // Day buttons configuration with full labels for better clarity
   const dayButtons = [
@@ -56,6 +58,24 @@ const Header = ({
         </div>
         
         <div className="header-controls">
+          {/* Debug Mode Toggle */}
+          <button 
+            className={`icon-button debug-mode-toggle ${debugMode ? 'active' : ''}`} 
+            onClick={onDebugModeToggle}
+            title={debugMode ? "Turn off debug mode" : "Turn on debug mode to troubleshoot map issues"}
+            aria-label={debugMode ? "Turn off debug mode" : "Turn on debug mode"}
+            style={{ 
+              backgroundColor: debugMode ? '#ff5722' : 'transparent',
+              color: debugMode ? 'white' : 'inherit'
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+              <path d="M10 8l6 4-6 4V8z"></path>
+            </svg>
+          </button>
+          
+          {/* Dark Mode Toggle */}
           <button 
             className="icon-button dark-mode-toggle" 
             onClick={onDarkModeToggle}
