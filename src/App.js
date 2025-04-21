@@ -20,7 +20,6 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [selectedNeighborhood, setSelectedNeighborhood] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [debugMode, setDebugMode] = useState(false);
   
   // Check for system preferences and saved dark mode preference on initial load
   useEffect(() => {
@@ -43,10 +42,6 @@ export default function App() {
       const savedDarkMode = localStorage.getItem('darkMode') === 'true';
       setDarkMode(savedDarkMode);
     }
-    
-    // Check for saved debug mode
-    const savedDebugMode = localStorage.getItem('debugMode') === 'true';
-    setDebugMode(savedDebugMode);
   }, []);
   
   // Effect to apply dark mode class to body when darkMode changes
@@ -57,17 +52,6 @@ export default function App() {
       document.body.classList.remove('dark-mode');
     }
   }, [darkMode]);
-  
-  // Debug logging helper
-  const debugLog = useCallback((message, data) => {
-    if (debugMode) {
-      if (data) {
-        console.log(`%c[APP DEBUG] ${message}`, 'background: #4CAF50; color: white; padding: 2px 5px; border-radius: 3px;', data);
-      } else {
-        console.log(`%c[APP DEBUG] ${message}`, 'background: #4CAF50; color: white; padding: 2px 5px; border-radius: 3px;');
-      }
-    }
-  }, [debugMode]);
   
   // Load CSV data on component mount
   useEffect(() => {
@@ -80,11 +64,6 @@ export default function App() {
       download: true,
       header: true,
       complete: (results) => {
-        // Add debug output to see raw data
-        if (debugMode) {
-          debugLog("Raw CSV data (first item):", results.data[0]);
-        }
-        
         // Sort by neighborhood
         const sortedData = results.data
           .filter(item => item.RestaurantName && item.Deal) // Filter out empty rows
@@ -111,12 +90,6 @@ export default function App() {
             hasValidCoordinates = !isNaN(lat) && !isNaN(lng) && 
                                   lat >= -90 && lat <= 90 && 
                                   lng >= -180 && lng <= 180;
-            
-            if (!hasValidCoordinates && debugMode) {
-              console.warn(`Venue ${venue.RestaurantName} has invalid coordinates: ${venue.Latitude}, ${venue.Longitude}`);
-            }
-          } else if (debugMode) {
-            console.warn(`Venue ${venue.RestaurantName} is missing coordinates`);
           }
           
           return { 
@@ -125,50 +98,23 @@ export default function App() {
           };
         });
         
-        // Log coordinates status summary if in debug mode
-        if (debugMode) {
-          const totalVenues = dataWithIdsAndValidation.length;
-          const venuesWithCoordinates = dataWithIdsAndValidation.filter(v => v.hasValidCoordinates).length;
-          
-          debugLog(`Coordinates summary: ${venuesWithCoordinates}/${totalVenues} venues have valid coordinates`);
-          
-          if (venuesWithCoordinates < totalVenues) {
-            const missingCoordinates = dataWithIdsAndValidation
-              .filter(v => !v.hasValidCoordinates)
-              .map(v => v.RestaurantName);
-            
-            debugLog(`Venues missing coordinates:`, missingCoordinates);
-          }
-        }
-        
         setVenues(dataWithIdsAndValidation);
         setAllVenues(dataWithIdsAndValidation);
         setFilteredVenues(dataWithIdsAndValidation);
         setIsLoading(false);
-        
-        // Log venues for debugging
-        if (debugMode) {
-          debugLog(`Loaded ${dataWithIdsAndValidation.length} venues`);
-          debugLog("First venue:", dataWithIdsAndValidation[0]);
-        }
       },
       error: (err) => {
         console.error('Error parsing CSV:', err);
         setIsLoading(false);
       }
     });
-  }, [debugMode, debugLog]);
+  }, []);
   
-  // Improved filter application function with clearer logic separation
+  // Filter application function with clearer logic separation
   const applyFilters = useCallback((day, isHappeningNow, neighborhood = null) => {
-    console.log(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}, neighborhood: ${neighborhood}`);
-    if (debugMode) {
-      debugLog(`Applying filters - day: ${day}, happeningNow: ${isHappeningNow}, neighborhood: ${neighborhood}`);
-    }
-    
     let filtered = [...allVenues];
     
-    // Apply day filter - This is the ONLY actual filtering that removes pins from the map
+    // Apply day filter
     if (day !== 'all') {
       const dayMapping = { 'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri' };
       const column = dayMapping[day];
@@ -178,14 +124,9 @@ export default function App() {
         const value = venue[column]?.trim()?.toLowerCase() || '';
         return value === 'yes';
       });
-      
-      console.log(`After ${day} filter: ${filtered.length} venues remain`);
-      if (debugMode) {
-        debugLog(`After ${day} filter: ${filtered.length} venues remain`);
-      }
     }
     
-    // Apply happening now filter - Also actually filters results
+    // Apply happening now filter
     if (isHappeningNow) {
       const today = new Date().getDay();
       const dayMapping = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri' };
@@ -196,33 +137,14 @@ export default function App() {
           const value = venue[todayColumn]?.trim()?.toLowerCase() || '';
           return value === 'yes';
         });
-        
-        console.log(`After 'happening now' filter for ${todayColumn}: ${filtered.length} venues remain`);
-        if (debugMode) {
-          debugLog(`After 'happening now' filter for ${todayColumn}: ${filtered.length} venues remain`);
-        }
       }
-    }
-    
-    // NO LONGER apply neighborhood filter here - neighborhood selection is now a visual highlight
-    // not a filtering operation
-    // If we're in debug mode, still log the count for that neighborhood
-    if (neighborhood && debugMode) {
-      const neighborhoodCount = filtered.filter(venue => venue.Neighborhood === neighborhood).length;
-      debugLog(`Neighborhood ${neighborhood} contains ${neighborhoodCount} venues after day filtering`);
-    }
-    
-    // Log IDs of the venues that passed all filters - for debugging
-    console.log("Filtered venue IDs:", filtered.map(v => v.id));
-    if (debugMode) {
-      debugLog("Filtered venue IDs:", filtered.map(v => v.id));
     }
     
     // Set filtered venues - this only affects visibility based on day filters
     setFilteredVenues(filtered);
     
     return filtered;
-  }, [allVenues, debugMode, debugLog]);
+  }, [allVenues]);
   
   // Apply filters whenever filter state changes - only day and happening now are actual filters
   useEffect(() => {
@@ -264,10 +186,6 @@ export default function App() {
     if (selected.Neighborhood && selected.Neighborhood !== selectedNeighborhood) {
       setSelectedNeighborhood(selected.Neighborhood);
     }
-    
-    if (debugMode) {
-      debugLog(`Selected venue: ${venueId}`, selected);
-    }
   };
   
   // Simplified neighborhood selection
@@ -278,16 +196,10 @@ export default function App() {
     }
     
     setSelectedNeighborhood(neighborhood);
-    
-    if (debugMode) {
-      debugLog(`Selected neighborhood: ${neighborhood}`);
-    }
   };
   
   // Improved handle day filter change
   const handleDayChange = (day) => {
-    console.log(`Day filter changing from ${activeDay} to ${day}`);
-    
     // Turn off "Happening Now" when "All Days" is selected
     if (day === 'all' && happeningNow) {
       setHappeningNow(false);
@@ -320,7 +232,6 @@ export default function App() {
   // Improved handle happening now toggle
   const handleHappeningNowToggle = () => {
     const newState = !happeningNow;
-    console.log(`Toggling 'happening now' to ${newState}`);
     setHappeningNow(newState);
     
     if (newState) {
@@ -335,28 +246,6 @@ export default function App() {
     } else {
       // When turning off "Happening Now", reset to "All Days"
       setActiveDay('all');
-      if (debugMode) {
-        debugLog('Resetting day filter to "All Days" after turning off "Happening Now"');
-      }
-    }
-  };
-  
-  // Handle debug mode toggle
-  const handleDebugModeToggle = () => {
-    const newDebugMode = !debugMode;
-    setDebugMode(newDebugMode);
-    
-    // Save preference to localStorage
-    localStorage.setItem('debugMode', newDebugMode.toString());
-    
-    console.log(`Debug mode ${newDebugMode ? 'enabled' : 'disabled'}`);
-    
-    // Force markers to update with debug visibility
-    if (newDebugMode && mapRef) {
-      setTimeout(() => {
-        console.log("Triggering marker debug refresh");
-        // This will trigger a re-render with debug mode
-      }, 500);
     }
   };
   
@@ -369,8 +258,6 @@ export default function App() {
         onHappeningNowToggle={handleHappeningNowToggle}
         darkMode={darkMode}
         onDarkModeToggle={handleDarkModeToggle}
-        debugMode={debugMode}
-        onDebugModeToggle={handleDebugModeToggle}
       />
       
       <main id="main-content">
@@ -395,32 +282,10 @@ export default function App() {
           darkMode={darkMode}
           selectedNeighborhood={selectedNeighborhood}
           isLoading={isLoading}
-          debugMode={debugMode}
-          key={`map-${debugMode}`} // Force re-mounting when debug mode changes
         />
       </main>
       
       <Footer darkMode={darkMode} />
-      
-      {debugMode && (
-        <div 
-          style={{
-            position: 'fixed',
-            bottom: '10px',
-            right: '10px',
-            background: 'rgba(255, 87, 34, 0.9)',
-            color: 'white',
-            padding: '5px 10px',
-            borderRadius: '4px',
-            fontSize: '12px',
-            zIndex: 10000,
-            cursor: 'pointer'
-          }}
-          onClick={handleDebugModeToggle}
-        >
-          DEBUG MODE ON
-        </div>
-      )}
     </div>
   );
 }

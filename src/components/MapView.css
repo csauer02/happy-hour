@@ -102,112 +102,6 @@
   overflow: visible !important;
 }
 
-/* Debug styles */
-#map-debug-overlay {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
-  max-width: 300px;
-  max-height: 400px;
-  overflow-y: auto;
-  z-index: 1000;
-  font-size: 12px;
-  font-family: monospace;
-}
-
-#debug-close {
-  cursor: pointer;
-  float: right;
-  margin-left: 10px;
-}
-
-.debug-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
-}
-
-.debug-section {
-  margin-bottom: 5px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid #555;
-}
-
-.debug-marker-list {
-  margin-top: 10px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.debug-visible {
-  color: #4caf50;
-  word-wrap: break-word;
-}
-
-.debug-hidden {
-  color: #f44336;
-  word-wrap: break-word;
-}
-
-.debug-buttons {
-  margin-top: 10px;
-}
-
-.debug-refresh-btn {
-  background: #4caf50;
-  border: none;
-  color: white;
-  padding: 5px;
-  border-radius: 3px;
-  cursor: pointer;
-  margin-right: 5px;
-}
-
-.debug-force-btn {
-  background: #ff9800;
-  border: none;
-  color: white;
-  padding: 5px;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.debug-banner {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0,0,0,0.7);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 15px;
-  z-index: 1000;
-  font-size: 12px;
-}
-
-.debug-panel {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background-color: rgba(0,0,0,0.7);
-  color: white;
-  padding: 10px;
-  font-size: 12px;
-  font-family: monospace;
-  z-index: 1000;
-  max-width: 300px;
-  max-height: 150px;
-  overflow: auto;
-}
-
-.debug-error {
-  color: #ff5252;
-}
-
 /* Mobile Portrait Adjustments */
 @media (max-width: 800px) and (orientation: portrait) {
   #map-container {
@@ -234,10 +128,5 @@
   #map-favicon-overlay img {
     width: 36px;
     height: 36px;
-  }
-  
-  #map-debug-overlay {
-    max-width: 80%;
-    max-height: 200px;
   }
 }

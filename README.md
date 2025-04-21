@@ -1,6 +1,6 @@
-# ATL Happy Hour - React Edition
+# ATL Socializers Happy Hour
 
-This is a React implementation of the ATL Happy Hour website, which helps users find happy hour deals across Atlanta. The app displays happy hour venues on a map and allows filtering by day of the week or to see what's happening now.
+This is a React implementation of the ATL Socializers Happy Hour website, which helps users find happy hour deals across Atlanta. The app displays happy hour venues on a map and allows filtering by day of the week or to see what's happening now.
 
 ## Features
 
@@ -10,6 +10,7 @@ This is a React implementation of the ATL Happy Hour website, which helps users 
 - Mobile-responsive design
 - Venues grouped by neighborhood
 - Restaurant details including deals and external links
+- Dark mode support
 
 ## Project Structure
 
@@ -17,8 +18,13 @@ This is a React implementation of the ATL Happy Hour website, which helps users 
 atl-happy-hour-react/
 ├── public/
 │   ├── favicon.ico
-│   ├── index.html
-│   └── Atl-happy-hour/ (static assets)
+│   ├── favicon.svg
+│   ├── favicon-96x96.png
+│   ├── apple-touch-icon.png
+│   ├── android-chrome-192x192.png
+│   ├── android-chrome-512x512.png
+│   ├── site.webmanifest
+│   └── index.html
 ├── src/
 │   ├── components/
 │   │   ├── Header.js
@@ -57,6 +63,8 @@ The application fetches venue data from a Google Sheets CSV file. To update the 
 - Deal
 - RestaurantURL
 - MapsURL
+- Latitude
+- Longitude
 - Mon, Tue, Wed, Thu, Fri (with "yes" values to indicate availability)
 
 ## Dependencies
@@ -64,10 +72,6 @@ The application fetches venue data from a Google Sheets CSV file. To update the 
 - React
 - PapaParse (for CSV parsing)
 - Google Maps JavaScript API
-
-## Original Project
-
-This React application is based on the original static HTML/CSS/JS implementation, enhancing it with React's component-based architecture for better maintainability and future feature additions.
 
 ## License
 

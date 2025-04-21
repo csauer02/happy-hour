@@ -8,7 +8,7 @@ const Footer = ({ darkMode }) => {
   return (
     <footer id="global-footer" className={darkMode ? 'dark-mode' : ''}>
       <div className="rainbow-border"></div>
-      <p>As of March {currentYear} – call or visit each restaurant for up-to-date offers.</p>
+      <p>© {currentYear} ATL Socializers – Call or visit each venue for up-to-date offers.</p>
     </footer>
   );
 };

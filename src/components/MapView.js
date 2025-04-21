@@ -13,8 +13,7 @@ const MapView = ({
   selectedVenue, 
   darkMode, 
   selectedNeighborhood, 
-  filteredVenues,
-  debugMode = false
+  filteredVenues
 }) => {
   const mapContainerRef = useRef(null);
   const googleMapRef = useRef(null);
@@ -24,28 +23,10 @@ const MapView = ({
   const mapInitializedRef = useRef(false);
   const previousSelectedVenueRef = useRef(null);
   const filteredVenueIdsRef = useRef(new Set());
-  const [debugInfo, setDebugInfo] = useState({
-    markersCreated: 0,
-    markersVisible: 0,
-    markersHidden: 0,
-    lastAction: '',
-    errors: []
-  });
   
   // Add state for neighborhood focus and venue selection
   const [focusedNeighborhood, setFocusedNeighborhood] = useState(null);
   const [isVenueSelected, setIsVenueSelected] = useState(false);
-  
-  // Create a debug log wrapper function
-  const debugLog = useCallback((message, data = null) => {
-    if (debugMode) {
-      if (data) {
-        console.log(`%c[MAP DEBUG] ${message}`, 'background: #aa00aa; color: white; padding: 2px 5px; border-radius: 3px;', data);
-      } else {
-        console.log(`%c[MAP DEBUG] ${message}`, 'background: #aa00aa; color: white; padding: 2px 5px; border-radius: 3px;');
-      }
-    }
-  }, [debugMode]);
   
   // Get Google Maps API key from environment variables
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY || '';
@@ -94,7 +75,6 @@ const MapView = ({
           d="M12,2C8.14,2 5,5.14 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.86 -3.14,-7 -7,-7zM12,4c1.1,0 2,0.9 2,2c0,1.1 -0.9,2 -2,2s-2,-0.9 -2,-2c0,-1.1 0.9,-2 2,-2z"
           opacity="${opacity}"
         />
-        ${venueId !== null && debugMode ? `<text x="12" y="11" font-size="7" text-anchor="middle" fill="white" font-weight="bold">${venueId}</text>` : ''}
       </svg>
     `;
     
@@ -106,13 +86,13 @@ const MapView = ({
     div.style.transform = isSelected ? 'scale(1.2)' : 'scale(1)';
     div.style.transition = 'all 0.2s ease';
     
-    // Add a data attribute for debugging
+    // Add a data attribute for venue identification
     if (venueId !== null) {
       div.setAttribute('data-venue-id', venueId);
     }
     
     return div;
-  }, [debugMode]);
+  }, []);
   
   // Create Near Me button
   const createNearMeButton = useCallback(() => {
@@ -147,190 +127,18 @@ const MapView = ({
     
     return controlButton;
   }, [darkMode]);
-
-  // Create Debug button for map
-  const createDebugButton = useCallback(() => {
-    const debugButton = document.createElement('button');
-    debugButton.style.backgroundColor = debugMode ? '#ff5722' : (darkMode ? '#333' : '#fff');
-    debugButton.style.border = darkMode ? '2px solid #555' : '2px solid #fff';
-    debugButton.style.borderRadius = '3px';
-    debugButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
-    debugButton.style.cursor = 'pointer';
-    debugButton.style.marginTop = '10px';
-    debugButton.style.marginRight = '10px';
-    debugButton.style.padding = '8px 16px';
-    debugButton.style.textAlign = 'center';
-    debugButton.style.color = debugMode ? '#fff' : (darkMode ? '#f0f0f0' : '#750787');
-    debugButton.style.fontFamily = 'Roboto,Arial,sans-serif';
-    debugButton.style.fontSize = '14px';
-    debugButton.style.fontWeight = 'bold';
-    debugButton.textContent = '🐞 Debug';
-    debugButton.title = 'Click to show marker debugging information';
-    debugButton.type = 'button';
-    debugButton.id = 'map-debug-button';
-    
-    // Change appearance on hover
-    debugButton.addEventListener('mouseover', () => {
-      debugButton.style.backgroundColor = debugMode ? '#ff7043' : (darkMode ? '#444' : '#f8f8f8');
-      debugButton.style.color = debugMode ? '#fff' : (darkMode ? '#fff' : '#8a2be2');
-    });
-    
-    debugButton.addEventListener('mouseout', () => {
-      debugButton.style.backgroundColor = debugMode ? '#ff5722' : (darkMode ? '#333' : '#fff');
-      debugButton.style.color = debugMode ? '#fff' : (darkMode ? '#f0f0f0' : '#750787');
-    });
-    
-    // Add click handler
-    debugButton.addEventListener('click', () => {
-      // Show/hide debug info
-      showMarkerDebugInfo();
-    });
-    
-    return debugButton;
-  }, [darkMode, debugMode]);
   
-  // Show debug info for markers
-  const showMarkerDebugInfo = useCallback(() => {
-    if (!googleMapRef.current) return;
-
-    const visibleMarkers = [];
-    const hiddenMarkers = [];
-    
-    Object.entries(markersRef.current).forEach(([id, marker]) => {
-      if (marker.map === googleMapRef.current) {
-        visibleMarkers.push(id);
-      } else {
-        hiddenMarkers.push(id);
+  // Helper to close active info window
+  const closeActiveInfoWindow = useCallback(() => {
+    if (activeInfoWindowRef.current) {
+      try {
+        activeInfoWindowRef.current.setMap(null);
+        activeInfoWindowRef.current = null;
+      } catch (error) {
+        console.error("Error closing info window:", error);
       }
-    });
-    
-    debugLog('==== MARKER DEBUG INFO ====');
-    debugLog(`Total markers: ${Object.keys(markersRef.current).length}`);
-    debugLog(`Visible markers: ${visibleMarkers.length}`, visibleMarkers);
-    debugLog(`Hidden markers: ${hiddenMarkers.length}`, hiddenMarkers);
-    debugLog(`Filtered venues: ${filteredVenues.length}`, filteredVenues.map(v => v.id));
-    debugLog('==========================');
-    
-    // Update debug info state
-    setDebugInfo(prev => ({
-      ...prev,
-      markersCreated: Object.keys(markersRef.current).length,
-      markersVisible: visibleMarkers.length,
-      markersHidden: hiddenMarkers.length,
-      lastAction: 'Debug info displayed'
-    }));
-    
-    // Create a debug overlay on the map
-    createDebugOverlay(visibleMarkers, hiddenMarkers);
-  }, [debugLog, filteredVenues]);
-  
-  // Create a debug overlay on the map
-  const createDebugOverlay = useCallback((visibleMarkers, hiddenMarkers) => {
-    try {
-      // Remove any existing debug overlay
-      const existingOverlay = document.getElementById('map-debug-overlay');
-      if (existingOverlay) {
-        existingOverlay.remove();
-      }
-      
-      // Create a new debug overlay
-      const overlay = document.createElement('div');
-      overlay.id = 'map-debug-overlay';
-      overlay.style.position = 'absolute';
-      overlay.style.bottom = '10px';
-      overlay.style.left = '10px';
-      overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-      overlay.style.color = 'white';
-      overlay.style.padding = '10px';
-      overlay.style.borderRadius = '5px';
-      overlay.style.maxWidth = '300px';
-      overlay.style.maxHeight = '400px';
-      overlay.style.overflowY = 'auto';
-      overlay.style.zIndex = '1000';
-      overlay.style.fontSize = '12px';
-      overlay.style.fontFamily = 'monospace';
-      
-      // Add debug info to the overlay
-      overlay.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-          <strong>Marker Debug Info</strong>
-          <span id="debug-close" style="cursor: pointer;">✖</span>
-        </div>
-        <div style="margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #555;">
-          <div>Total markers: ${Object.keys(markersRef.current).length}</div>
-          <div>Visible markers: ${visibleMarkers.length}</div>
-          <div>Hidden markers: ${hiddenMarkers.length}</div>
-          <div>Filtered venues: ${filteredVenues.length}</div>
-        </div>
-        <div style="margin-top: 10px; max-height: 200px; overflow-y: auto;">
-          <div><strong>Visible IDs:</strong></div>
-          <div style="color: #4caf50; word-wrap: break-word;">${visibleMarkers.join(', ')}</div>
-          <div style="margin-top: 10px;"><strong>Hidden IDs:</strong></div>
-          <div style="color: #f44336; word-wrap: break-word;">${hiddenMarkers.join(', ')}</div>
-        </div>
-        <div style="margin-top: 10px;">
-          <button id="debug-refresh" style="background: #4caf50; border: none; color: white; padding: 5px; border-radius: 3px; cursor: pointer; margin-right: 5px;">Refresh Data</button>
-          <button id="debug-force-update" style="background: #ff9800; border: none; color: white; padding: 5px; border-radius: 3px; cursor: pointer;">Force Update Visibility</button>
-        </div>
-      `;
-      
-      // Add the overlay to the map container
-      if (mapContainerRef.current) {
-        mapContainerRef.current.appendChild(overlay);
-        
-        // Add event listeners to the overlay
-        document.getElementById('debug-close').addEventListener('click', () => {
-          overlay.remove();
-        });
-        
-        document.getElementById('debug-refresh').addEventListener('click', () => {
-          showMarkerDebugInfo();
-        });
-        
-        document.getElementById('debug-force-update').addEventListener('click', () => {
-          forceUpdateMarkersVisibility();
-        });
-      }
-    } catch (error) {
-      console.error("Error creating debug overlay:", error);
     }
-  }, [filteredVenues, showMarkerDebugInfo]);
-  
-  // Force update marker visibility
-  const forceUpdateMarkersVisibility = useCallback(() => {
-    if (!googleMapRef.current) return;
-    
-    debugLog("FORCE UPDATING MARKER VISIBILITY");
-    
-    try {
-      // Create a Set of filtered venue IDs
-      const filteredIds = new Set(filteredVenues.map(v => v.id.toString()));
-      
-      // Update all markers visibility
-      Object.entries(markersRef.current).forEach(([venueId, marker]) => {
-        if (marker) {
-          const shouldBeVisible = filteredIds.has(venueId);
-          marker.map = shouldBeVisible ? googleMapRef.current : null;
-          debugLog(`Force set marker ${venueId} visibility to ${shouldBeVisible}`);
-        }
-      });
-      
-      debugLog("Force visibility update complete");
-      setDebugInfo(prev => ({
-        ...prev,
-        lastAction: 'Force updated marker visibility'
-      }));
-      
-      // Refresh debug info
-      setTimeout(() => showMarkerDebugInfo(), 500);
-    } catch (error) {
-      console.error("Error force updating marker visibility:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        errors: [...prev.errors, `Error force updating marker visibility: ${error.message}`]
-      }));
-    }
-  }, [debugLog, filteredVenues, showMarkerDebugInfo]);
+  }, []);
   
   // Handle "Near Me" functionality
   const handleNearMe = useCallback(() => {
@@ -373,18 +181,6 @@ const MapView = ({
     }
   }, [createCircleMarker, setUserLocation]);
   
-  // Helper to close active info window
-  const closeActiveInfoWindow = useCallback(() => {
-    if (activeInfoWindowRef.current) {
-      try {
-        activeInfoWindowRef.current.setMap(null);
-        activeInfoWindowRef.current = null;
-      } catch (error) {
-        console.error("Error closing info window:", error);
-      }
-    }
-  }, []);
-  
   // Initialize Google Maps
   const initializeMap = useCallback(() => {
     if (mapInitializedRef.current || !mapContainerRef.current) return;
@@ -425,13 +221,6 @@ const MapView = ({
       
       map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(nearMeControlDiv);
       
-      // Add Debug control
-      const debugControlDiv = document.createElement('div');
-      const debugControl = createDebugButton();
-      debugControlDiv.appendChild(debugControl);
-      
-      map.controls[window.google.maps.ControlPosition.TOP_RIGHT].push(debugControlDiv);
-      
       // Add global map click handler to close any open info windows and clear selection
       map.addListener('click', () => {
         closeActiveInfoWindow();
@@ -441,23 +230,8 @@ const MapView = ({
           onMarkerClick(null);
         }
       });
-      
-      // Monitor map capabilities for debugging
-      map.addListener('mapcapabilities_changed', () => {
-        const capabilities = map.getMapCapabilities();
-        
-        if (!capabilities.isAdvancedMarkersAvailable) {
-          debugLog("Warning: Advanced markers are not available!");
-        }
-      });
-      
-      debugLog("Map initialized successfully");
     } catch (error) {
       console.error("Error initializing map:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        errors: [...prev.errors, `Error initializing map: ${error.message}`]
-      }));
     }
   }, [
     handleNearMe, 
@@ -465,9 +239,7 @@ const MapView = ({
     selectedVenue, 
     onMarkerClick, 
     createNearMeButton, 
-    closeActiveInfoWindow, 
-    createDebugButton, 
-    debugLog
+    closeActiveInfoWindow
   ]);
   
   // Create custom info window
@@ -604,13 +376,12 @@ const MapView = ({
     
     return infoWindow;
   }, [darkMode, onMarkerClick, closeActiveInfoWindow]);
-
+  
   // Load Google Maps API
   useEffect(() => {
     if (mapInitializedRef.current) return;
     
     if (googleMapsLoading) {
-      debugLog("Google Maps API is already loading");
       return;
     }
     
@@ -623,8 +394,6 @@ const MapView = ({
           script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=beta&callback=initCallback`;
           
           window.initCallback = async () => {
-            debugLog("Google Maps API loaded successfully");
-            
             if (window.google && window.google.maps) {
               await window.google.maps.importLibrary("marker");
               await window.google.maps.importLibrary("maps");
@@ -644,24 +413,18 @@ const MapView = ({
       } catch (error) {
         console.error("Error loading Google Maps API:", error);
         googleMapsLoading = false;
-        setDebugInfo(prev => ({
-          ...prev,
-          errors: [...prev.errors, `Error loading Google Maps API: ${error.message}`]
-        }));
       }
     }
     
     if (window.google && window.google.maps) {
-      debugLog("Google Maps API already loaded");
       loadMap();
       return;
     }
     
     if (!googleMapsLoaded) {
-      debugLog("Loading Google Maps API");
       loadMap();
     }
-  }, [apiKey, initializeMap, debugLog]);
+  }, [apiKey, initializeMap]);
   
   // Center map on marker
   const centerMapOnMarker = useCallback((marker, map) => {
@@ -699,9 +462,6 @@ const MapView = ({
       const bounds = new window.google.maps.LatLngBounds();
       let hasMarkers = false;
       
-      // Debug
-      debugLog(`Zooming to neighborhood: ${neighborhood}`);
-      
       // Include only markers in this neighborhood (regardless of filtering)
       // This ensures we zoom to all venues in the neighborhood, even if they're filtered out
       Object.values(markers).forEach(marker => {
@@ -710,7 +470,6 @@ const MapView = ({
             marker.position) {
           bounds.extend(marker.position);
           hasMarkers = true;
-          debugLog(`Including marker ${marker._venueId} in bounds`);
         }
       });
       
@@ -725,25 +484,15 @@ const MapView = ({
         if (googleMapRef.current.getZoom() > 15) {
           googleMapRef.current.setZoom(15);
         }
-        
-        debugLog(`Zoomed to neighborhood: ${neighborhood}`);
-      } else {
-        debugLog(`No markers found in neighborhood: ${neighborhood}`);
       }
     } catch (error) {
       console.error("Error zooming to neighborhood:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        errors: [...prev.errors, `Error zooming to neighborhood: ${error.message}`]
-      }));
     }
-  }, [closeActiveInfoWindow, debugLog]);
+  }, [closeActiveInfoWindow]);
   
   // Update markers opacity based on neighborhood and venue selection
   useEffect(() => {
     if (!mapInitializedRef.current || !googleMapRef.current) return;
-    
-    debugLog(`Updating marker opacity - Selected Neighborhood: ${focusedNeighborhood}, Venue Selected: ${isVenueSelected}`);
     
     // Process each marker to update its appearance based on selection
     Object.entries(markersRef.current).forEach(([venueId, marker]) => {
@@ -799,8 +548,7 @@ const MapView = ({
     selectedVenue, 
     venues, 
     createPinElement, 
-    getPinColor, 
-    debugLog
+    getPinColor
   ]);
   
   // Update pin styles when selected venue changes
@@ -809,8 +557,6 @@ const MapView = ({
     if (previousSelectedVenueRef.current && previousSelectedVenueRef.current.id !== selectedVenue?.id) {
       const prevMarker = markersRef.current[previousSelectedVenueRef.current.id];
       if (prevMarker && prevMarker.content) {
-        debugLog(`Deselecting marker: ${previousSelectedVenueRef.current.id}`);
-        
         // Update marker appearance to deselected state
         const pinElement = createPinElement(
           getPinColor(previousSelectedVenueRef.current.id), 
@@ -832,8 +578,6 @@ const MapView = ({
     if (selectedVenue && markersRef.current[selectedVenue.id]) {
       const marker = markersRef.current[selectedVenue.id];
       
-      debugLog(`Selecting marker: ${selectedVenue.id}`);
-      
       // Update marker appearance to selected state
       if (marker.content) {
         const pinElement = createPinElement(
@@ -854,7 +598,7 @@ const MapView = ({
     
     // Store current selection for next update
     previousSelectedVenueRef.current = selectedVenue;
-  }, [selectedVenue, createPinElement, getPinColor, debugLog]);
+  }, [selectedVenue, createPinElement, getPinColor]);
   
   // Show info window for selected venue
   useEffect(() => {
@@ -871,15 +615,13 @@ const MapView = ({
         return;
       }
       
-      debugLog(`Showing info window for venue: ${selectedVenue.id}`);
-      
       const marker = markersRef.current[selectedVenue.id];
       if (marker) {
         // Create info window content
         const infoContent = `
           <div style="font-family: 'Roboto', sans-serif; max-width: 200px; padding: 5px;">
             <div style="font-weight: bold; color: ${darkMode ? '#b77fdb' : '#750787'}; font-size: 14px; margin-bottom: 8px; border-bottom: 2px solid ${darkMode ? '#b77fdb' : '#750787'}; padding-bottom: 4px;">
-              ${selectedVenue.RestaurantName || 'Venue'} ${debugMode ? `(ID: ${selectedVenue.id})` : ''}
+              ${selectedVenue.RestaurantName || 'Venue'}
             </div>
             <div style="font-size: 12px; margin-bottom: 6px;">${selectedVenue.Deal || ''}</div>
             <div style="font-size: 11px; color: ${darkMode ? '#aaa' : '#666'}; font-style: italic; margin-top: 4px;">
@@ -893,23 +635,15 @@ const MapView = ({
         
         // Center on the selected marker without animation
         centerMapOnMarker(marker, googleMapRef.current);
-      } else {
-        debugLog(`ERROR: Marker not found for venue: ${selectedVenue.id}`);
       }
     } catch (error) {
       console.error("Error showing info window for selected venue:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        errors: [...prev.errors, `Error showing info window: ${error.message}`]
-      }));
     }
-  }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker, closeActiveInfoWindow, debugLog, debugMode]);
+  }, [selectedVenue, darkMode, createCustomInfoWindow, centerMapOnMarker, closeActiveInfoWindow]);
 
-  // KEY CHANGE: This is the fixed simplified effect that updates marker visibility
+  // Update marker visibility
   useEffect(() => {
     if (!googleMapRef.current) return;
-    
-    debugLog(`Updating marker visibility for ${filteredVenues.length} venues`);
     
     // Create a Set of filtered venue IDs as STRINGS for consistent comparison
     const filteredIds = new Set(filteredVenues.map(v => v.id.toString()));
@@ -923,35 +657,17 @@ const MapView = ({
         
         // Only update if visibility needs to change
         if (shouldBeVisible !== isCurrentlyVisible) {
-          debugLog(`Setting marker ${venueId} visibility to ${shouldBeVisible}`);
           marker.map = shouldBeVisible ? googleMapRef.current : null;
         }
       }
     });
-    
-    debugLog(`Updated marker visibility - ${filteredVenues.length} should be visible`);
-    
-    // Update debug info if debugging
-    if (debugMode) {
-      setTimeout(() => {
-        const visibleCount = Object.values(markersRef.current).filter(m => m.map === googleMapRef.current).length;
-        setDebugInfo(prev => ({
-          ...prev,
-          markersVisible: visibleCount,
-          markersHidden: Object.keys(markersRef.current).length - visibleCount,
-          lastAction: 'Updated marker visibility'
-        }));
-      }, 100);
-    }
-  }, [filteredVenues, debugLog, debugMode]);
+  }, [filteredVenues]);
   
-  // KEY CHANGE: New marker creation function that uses Latitude/Longitude from the venue data
+  // Create markers for venues
   useEffect(() => {
     if (!mapInitializedRef.current || !googleMapRef.current || !venues || venues.length === 0) {
       return;
     }
-    
-    debugLog(`Checking for missing markers (${venues.length} total venues)`);
     
     // Only create markers for venues that don't already have them
     const missingVenues = venues.filter(venue => {
@@ -959,11 +675,8 @@ const MapView = ({
     });
     
     if (missingVenues.length === 0) {
-      debugLog("No missing markers to create");
       return; // Skip if all markers exist
     }
-    
-    debugLog(`Creating ${missingVenues.length} new markers`);
     
     // Process each venue without delay since we're not geocoding anymore
     missingVenues.forEach(venue => {
@@ -983,7 +696,6 @@ const MapView = ({
           
           // Validate coordinates (simple check)
           if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            debugLog(`Invalid coordinates for venue ${venue.id}: ${lat}, ${lng}`);
             return;
           }
           
@@ -1016,7 +728,6 @@ const MapView = ({
           
           // Add click handler
           marker.addListener('click', () => {
-            debugLog(`Marker clicked: ${venue.id}`);
             onMarkerClick(venue.id);
           });
           
@@ -1028,38 +739,18 @@ const MapView = ({
             ...prev,
             [venueIdStr]: marker
           }));
-          
-          debugLog(`Created marker for venue ${venue.id} at ${lat}, ${lng}`);
-          
-        } else {
-          debugLog(`Missing coordinates for venue ${venue.id}`);
         }
       } catch (error) {
         console.error(`Error creating marker for venue ${venue.id}:`, error);
-        setDebugInfo(prev => ({
-          ...prev,
-          errors: [...prev.errors, `Error creating marker for venue ${venue.id}: ${error.message}`]
-        }));
       }
     });
-    
-    // Update debug info if debugging
-    if (debugMode) {
-      setDebugInfo(prev => ({
-        ...prev,
-        markersCreated: Object.keys(markersRef.current).length,
-        lastAction: `Created ${missingVenues.length} markers`
-      }));
-    }
   }, [
     venues, 
     selectedVenue, 
     onMarkerClick, 
     setMarkers, 
     createPinElement, 
-    getPinColor,
-    debugLog,
-    debugMode
+    getPinColor
   ]);
   
   // Effect to handle neighborhood zoom when selected neighborhood changes
@@ -1071,65 +762,8 @@ const MapView = ({
       zoomToNeighborhood(selectedNeighborhood, markersRef.current);
     } catch (error) {
       console.error("Error in neighborhood zoom:", error);
-      setDebugInfo(prev => ({
-        ...prev,
-        errors: [...prev.errors, `Error zooming to neighborhood: ${error.message}`]
-      }));
     }
   }, [selectedNeighborhood, zoomToNeighborhood]);
-  
-  // Add debug button class
-  useEffect(() => {
-    // Update debug button state if it exists
-    const debugButton = document.getElementById('map-debug-button');
-    if (debugButton) {
-      debugButton.style.backgroundColor = debugMode ? '#ff5722' : (darkMode ? '#333' : '#fff');
-      debugButton.style.color = debugMode ? '#fff' : (darkMode ? '#f0f0f0' : '#750787');
-    }
-    
-    // Show initial debug info if debugging
-    if (debugMode) {
-      setTimeout(() => showMarkerDebugInfo(), 500);
-    }
-  }, [darkMode, debugMode, showMarkerDebugInfo]);
-  
-  // Debug display at the bottom of the map
-  const renderDebugPanel = () => {
-    if (!debugMode) return null;
-    
-    return (
-      <div className="debug-panel" style={{
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        color: 'white',
-        padding: '10px',
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        zIndex: 1000,
-        maxWidth: '300px',
-        maxHeight: '150px',
-        overflow: 'auto'
-      }}>
-        <div><strong>Markers:</strong> {debugInfo.markersCreated}</div>
-        <div><strong>Visible:</strong> {debugInfo.markersVisible}</div>
-        <div><strong>Hidden:</strong> {debugInfo.markersHidden}</div>
-        <div><strong>Filtered Venues:</strong> {filteredVenues.length}</div>
-        <div><strong>Last Action:</strong> {debugInfo.lastAction}</div>
-        {debugInfo.errors.length > 0 && (
-          <div>
-            <strong>Errors:</strong>
-            <ul style={{ margin: '0', paddingLeft: '20px' }}>
-              {debugInfo.errors.slice(-3).map((error, i) => (
-                <li key={i} style={{ color: '#ff5252' }}>{error}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    );
-  };
   
   return (
     <section id="map-container" className={darkMode ? 'dark-mode' : ''}>
@@ -1137,25 +771,6 @@ const MapView = ({
         <div id="map-favicon-overlay" className={darkMode ? 'dark-mode' : ''}>
           <img src="/favicon.ico" alt="Site Favicon" />
         </div>
-        
-        {renderDebugPanel()}
-        
-        {debugMode && (
-          <div style={{
-            position: 'absolute',
-            top: '10px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            padding: '5px 10px',
-            borderRadius: '15px',
-            zIndex: 1000,
-            fontSize: '12px'
-          }}>
-            DEBUG MODE ENABLED - Filtered Venues: {filteredVenues.length}
-          </div>
-        )}
       </div>
     </section>
   );
