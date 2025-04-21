@@ -257,7 +257,6 @@ export default function App() {
         onDayChange={handleDayChange}
         onHappeningNowToggle={handleHappeningNowToggle}
         darkMode={darkMode}
-        onDarkModeToggle={handleDarkModeToggle}
       />
       
       <main id="main-content">
