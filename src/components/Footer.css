@@ -12,8 +12,6 @@
   justify-content: center;
   z-index: 100;
   transition: var(--dark-transition);
-  padding-left: 1rem;
-  padding-right: 1rem;
 }
 
 #global-footer.dark-mode {
